@@ -1,0 +1,31 @@
+name: Java CI with Maven
+
+# 1. When should the robot wake up ?
+on:
+    push: # if doesn't have any code branches: ..., the robot will test all branches if someone push
+        # branches: [ "main" ] # Runs when someone push to main
+    pull_request:
+        branches: [ "main" ] # Runs when someone tries to merge code into main
+        
+jobs:
+    build:
+        runs-on: ubuntu-latest # OS which machine will run
+        
+        steps:
+        - name: 1. Download code
+          uses: actions/checkout@v4
+          
+        - name: 2. Install Java
+          uses: actions/setup-java@v4
+          with:
+            java-version: '25'
+            distribution: 'temurin'
+            cache: 'maven'
+            
+        - name: 3. Build and test
+          run: mvn -B package --file pom.xml
+          env:
+            SPRING_DATASOURCE_URL: ${{ secrets.PUBLIC_URL }}
+            SPRING_DATASOURCE_USERNAME: ${{ secrets.DB_USERNAME }}
+            SPRING_DATASOURCE_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        
