@@ -1,8 +1,8 @@
-name: Java CD pipeline
+name: Java CD pipeline (config)
 
 on:
     push:
-        branches: [ "main" ]
+        branches: [ "config-deploy" ]
     workflow_dispatch:
 
 jobs:
@@ -55,6 +55,6 @@ jobs:
                     # export SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }}
                     # export SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}
 
-                    nohup java -jar minboo-app.jar > application.log 2>&1 &
+                    nohup /home/ubuntu/.sdkman/candidates/java/current/bin/java -jar minboo-app.jar > application.log 2>&1 &
                     echo "Success Deploy ! App is running."
 
