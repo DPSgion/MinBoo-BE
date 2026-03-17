@@ -1,51 +1,78 @@
 package com.phobo.entity;
 
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity(name = "users")
 public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
-
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "users_id", updatable = false, nullable = false)
+    private String users_id;
+    private String url_avt;
     private String name;
-    private String email;
-    private String phone;
+    private LocalDate birth;
+    private String sex;
+    private String address;
+    private String username;
+    private String password;
+    private LocalDateTime created_at;
 
-    public int getId() {
-        return id;
+    public String getUsers_id() {
+        return users_id;
     }
-
-    public void setId(int id) {
-        this.id = id;
+    public void setUsers_id(String users_id) {
+        this.users_id = users_id;
     }
-
+    public String getUrl_avt() {
+        return url_avt;
+    }
+    public void setUrl_avt(String url_avt) {
+        this.url_avt = url_avt;
+    }
     public String getName() {
         return name;
     }
-
     public void setName(String name) {
         this.name = name;
     }
-
-    public String getEmail() {
-        return email;
+    public LocalDate getBirth() {
+        return birth;
     }
-
-    public void setEmail(String email) {
-        this.email = email;
+    public void setBirth(LocalDate birth) {
+        this.birth = birth;
     }
-
-    public String getPhone() {
-        return phone;
+    public String getSex() {
+        return sex;
     }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
+    public void setSex(String sex) {
+        this.sex = sex;
     }
-
+    public String getAddress() {
+        return address;
+    }
+    public void setAddress(String address) {
+        this.address = address;
+    }
+    public String getUsername() {
+        return username;
+    }
+    public void setUsername(String username) {
+        this.username = username;
+    }
+    public String getPassword() {
+        return password;
+    }
+    public void setPassword(String password) {
+        this.password = password;
+    }
+    public LocalDateTime getCreated_at() {
+        return created_at;
+    }
+    public void setCreated_at(LocalDateTime created_at) {
+        this.created_at = created_at;
+    }
 }
