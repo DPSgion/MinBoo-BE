@@ -5,27 +5,33 @@ import jakarta.persistence.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity(name = "users")
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "users_id", updatable = false, nullable = false)
-    private String users_id;
+    private UUID usersId;
+
+    @Column(name = "url_avt")
     private String url_avt;
+
     private String name;
     private LocalDate birth;
     private String sex;
     private String address;
     private String username;
     private String password;
+
+    @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime created_at;
 
-    public String getUsers_id() {
-        return users_id;
+    public UUID getUsersId() {
+        return usersId;
     }
-    public void setUsers_id(String users_id) {
-        this.users_id = users_id;
+    public void setUsersId(UUID usersId) {
+        this.usersId = usersId;
     }
     public String getUrl_avt() {
         return url_avt;
