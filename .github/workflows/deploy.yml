@@ -2,7 +2,9 @@ name: Java CD pipeline
 
 on:
     push:
-        branches: [ "main" ]
+        branches:
+            - 'main'
+            - 'config-*'
     workflow_dispatch:
 
 jobs:
@@ -50,11 +52,12 @@ jobs:
 
                     # Bơm biến môi trường Database từ GitHub Secrets vào hệ điều hành EC2
 
-                    export SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}
+                    export SPRING_DATASOURCE_URL="${{ secrets.SPRING_DATASOURCE_URL }}"
 
                     # export SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }}
                     # export SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}
 
-                    nohup java -jar minboo-app.jar > application.log 2>&1 &
+                    nohup /home/ubuntu/.sdkman/candidates/java/current/bin/java -jar minboo-app.jar > application.log 2>&1 &
+                        
                     echo "Success Deploy ! App is running."
 
