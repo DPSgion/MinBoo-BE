@@ -1,8 +1,10 @@
-name: Java CD pipeline (config)
+name: Java CD pipeline
 
 on:
     push:
-        branches: [ "config-deploy" ]
+        branches:
+            - 'main'
+            - 'config-*'
     workflow_dispatch:
 
 jobs:
