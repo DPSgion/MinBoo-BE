@@ -1,6 +1,6 @@
 package com.phobo.post.dto;
 
-public class PostRequest {
+public class CreatePostRequest {
     private String content;
     private String privacy;
 
