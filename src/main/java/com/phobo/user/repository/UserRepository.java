@@ -17,4 +17,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             "LOWER(u.email) LIKE LOWER(CONCAT('%', :term, '%'))")
     Page<User> searchUsers(@Param("term") String term, Pageable pageable);
 
+    boolean existsByUsername(String username);
+
+    boolean existsByEmail(String email);
+
+    boolean existsByPhone(String phone);
+    boolean existsByPhoneAndIdNot(String phone, UUID id);
+
 }
