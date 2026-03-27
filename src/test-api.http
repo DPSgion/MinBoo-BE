@@ -1,0 +1,19 @@
+### 1. Test tạo Tag mới (POST)
+POST http://localhost:8080/tags
+Content-Type: application/json
+
+{
+  "tag_name": "ooooooPPP"
+}
+
+### 2. Test tạo Tag bị trùng để xem có bắt lỗi 409 không (Chạy lại request POST)
+POST http://localhost:8080/tags
+Content-Type: application/json
+
+{
+  "tag_name": "oooooo"
+}
+
+### 3. Test lấy danh sách Tags (GET)
+GET http://localhost:8080/tags
+Accept: application/json
