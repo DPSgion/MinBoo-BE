@@ -6,8 +6,7 @@ import org.w3c.dom.Text;
 
 import java.sql.Time;
 import java.time.LocalDateTime;
-import java.util.Date;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(name = "posts")
@@ -33,14 +32,20 @@ public class Post {
     private String privacy;
 
     //tránh truyền dữ liệu vô
-    @Column(name = "create_at", insertable = false, updatable = false)
+    @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "delete_at", insertable = false, updatable = false)
+    @Column(name = "deleted_at")
     private LocalDateTime deleteAt;
 
-    @Column(name = "update_at", insertable = false, updatable = false)
+    @Column(name = "updated_at", insertable = false)
     private LocalDateTime updateAt;
+
+    //cascade thao tác từ Post sẽ được truyền xuống PostTag
+    //orphanRemoval Xóa 1 PostTag khỏi Post thì nó cũng sẽ bị xóa khỏi DB
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<PostTag> postTags = new HashSet<>();
+
 
     public UUID getPostId() {
         return postId;
@@ -104,5 +109,13 @@ public class Post {
 
     public void setUpdateAt(LocalDateTime updateAt) {
         this.updateAt = updateAt;
+    }
+
+    public Set<PostTag> getPostTags() {
+        return postTags;
+    }
+
+    public void setPostTags(Set<PostTag> postTags) {
+        this.postTags = postTags;
     }
 }

@@ -1,6 +1,7 @@
 package com.phobo.post.controller;
 
 import com.phobo.post.dto.CreatePostRequest;
+import com.phobo.post.dto.PostResponse;
 import com.phobo.post.entity.Post;
 import com.phobo.post.service.PostService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,22 +17,32 @@ import java.util.UUID;
 @RequestMapping("/posts")
 public class PostController {
 
-    @Autowired //kết nối, ko cần khởi tạo new
-    private PostService postService;
+    private final PostService postService;
+
+    public PostController(PostService postService) {
+        this.postService = postService;
+    }
+
+    //test
+    private final UUID HARDCODED_USER_ID = UUID.fromString("7d99d30e-caeb-4e3a-aa81-cc5a7c58a1d2");
 
     //Tạo bài viết
     //@RequestBody khi FE gửi JSON thì rqbody sẽ biến nó thành object để thao tác
-    @PostMapping
-    public ResponseEntity<?> createNewPost(@RequestBody CreatePostRequest request){
-        Post savedPost = postService.createPost(request);
+    @PostMapping(consumes = {"multipart/form-data"})
+    public ResponseEntity<Map<String, Object>> createPost(@ModelAttribute CreatePostRequest request) {
+        System.out.println("Content: " + request.getContent());
+        System.out.println("Privacy: " + request.getPrivacy());
+        System.out.println("Tag_ids: " + request.getTag_ids());
+        System.out.println("File: " + (request.getUrl_img() != null ? request.getUrl_img().getOriginalFilename() : "null"));
 
-        //cấu trúc respone
-        Map<String, Object> responseBody = new HashMap<>();
-        responseBody.put("success", true);
-        responseBody.put("data", savedPost);
-        responseBody.put("message", "OK");
+        Post post = postService.createPost(request, HARDCODED_USER_ID);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(responseBody);
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", post);
+        response.put("message", "Post created successfully");
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     //Xóa bài viết
