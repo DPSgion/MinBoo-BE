@@ -16,9 +16,6 @@ public class Tag {
     @Column(name = "tag_name", nullable = false, unique = true, length = 100)
     private String tagName;
 
-    @Column(name = "created_by")
-    private UUID UserID;
-
     @Column(name = "created_at", insertable = false, updatable = false)
     private ZonedDateTime createdAt;
 
@@ -36,15 +33,6 @@ public class Tag {
 
     public void setTagName(String tagName) {
         this.tagName = tagName;
-    }
-
-
-    public UUID getUserID() {
-        return UserID;
-    }
-
-    public void setUserID(UUID userID) {
-        UserID = userID;
     }
 
     public ZonedDateTime getCreatedAt() {
