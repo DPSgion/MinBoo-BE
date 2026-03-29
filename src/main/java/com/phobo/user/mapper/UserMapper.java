@@ -5,7 +5,6 @@ import com.phobo.user.dto.UserResponse;
 import com.phobo.user.dto.UserUpdateRequest;
 import com.phobo.user.entity.User;
 import org.mapstruct.*;
-import org.springframework.context.annotation.Bean;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface UserMapper {
