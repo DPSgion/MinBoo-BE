@@ -1,5 +1,6 @@
 package com.phobo.post.service;
 
+import com.phobo.common.oci.ImageStorageService;
 import com.phobo.post.dto.CreatePostRequest;
 import com.phobo.post.dto.PostResponse;
 import com.phobo.post.entity.Post;
@@ -16,19 +17,18 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-
 public class PostService {
 
     private final PostRepository postRepository;
     private final TagRepository tagRepository;
-    private final FileUploadService fileUploadService;
     private final PostTagRepository postTagRepository;
+    private final ImageStorageService imageStorageService;
 
-    public PostService(PostRepository postRepository, TagRepository tagRepository, FileUploadService fileUploadService, PostTagRepository postTagRepository) {
+    public PostService(PostRepository postRepository, TagRepository tagRepository, PostTagRepository postTagRepository, ImageStorageService imageStorageService) {
         this.postRepository = postRepository;
         this.tagRepository = tagRepository;
-        this.fileUploadService = fileUploadService;
         this.postTagRepository = postTagRepository;
+        this.imageStorageService = imageStorageService;
     }
 
     @Transactional
@@ -41,10 +41,14 @@ public class PostService {
             throw new IllegalArgumentException("Post phải có nội dung hoặc hình ảnh");
         }
 
-        // Upload ảnh
+        // Upload ảnh lên oracle
         String imageUrl = null;
         if (hasImage) {
-            imageUrl = fileUploadService.uploadImage(request.getUrl_img(), "posts");
+            try {
+                imageUrl = imageStorageService.uploadImage(request.getUrl_img());
+            }catch (Exception e){
+                throw new RuntimeException("Upload ảnh lên oracle thất bại: " + e.getMessage(), e);
+            }
         }
 
         // Tạo Post

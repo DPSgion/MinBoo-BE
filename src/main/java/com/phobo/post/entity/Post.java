@@ -25,7 +25,7 @@ public class Post {
     @Column(columnDefinition = "TEXT", name = "content")
     private String content;
 
-    @Column(name = "url_img")
+    @Column(columnDefinition = "TEXT", name = "url_img")
     private String urlImg;
 
     @Column(name = "privacy")
