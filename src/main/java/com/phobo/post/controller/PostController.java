@@ -30,10 +30,6 @@ public class PostController {
     //@RequestBody khi FE gửi JSON thì rqbody sẽ biến nó thành object để thao tác
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<Map<String, Object>> createPost(@ModelAttribute CreatePostRequest request) {
-        System.out.println("Content: " + request.getContent());
-        System.out.println("Privacy: " + request.getPrivacy());
-        System.out.println("Tag_ids: " + request.getTag_ids());
-        System.out.println("File: " + (request.getUrl_img() != null ? request.getUrl_img().getOriginalFilename() : "null"));
 
         Post post = postService.createPost(request, HARDCODED_USER_ID);
 

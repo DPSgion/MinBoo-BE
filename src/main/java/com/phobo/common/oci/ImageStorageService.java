@@ -5,6 +5,7 @@ import com.oracle.bmc.auth.AuthenticationDetailsProvider;
 import com.oracle.bmc.auth.ConfigFileAuthenticationDetailsProvider;
 import com.oracle.bmc.objectstorage.ObjectStorage;
 import com.oracle.bmc.objectstorage.ObjectStorageClient;
+import com.oracle.bmc.objectstorage.requests.DeleteObjectRequest;
 import com.oracle.bmc.objectstorage.requests.PutObjectRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -70,6 +71,48 @@ public class ImageStorageService {
 
         return String.format("https://objectstorage.%s.oraclecloud.com/n/%s/b/%s/o/%s",
                 region, namespace, bucketName, objectName);
+    }
+
+
+    // Hàm xóa ảnh từ URL
+    public void deleteImageByUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            return;
+        }
+
+        try {
+            // 1. Dùng mẹo cắt chuỗi để lấy objectName từ URL dài
+            // URL luôn có đoạn "/o/" đứng trước tên file
+            String marker = "/o/";
+            int index = imageUrl.indexOf(marker);
+            if (index == -1) {
+                return; // Link không đúng chuẩn Oracle, bỏ qua
+            }
+
+            // Lấy phần đuôi sau chữ "/o/" (chính là posts/tên-file.png)
+            String objectName = imageUrl.substring(index + marker.length());
+
+            // 2. Kết nối với Oracle
+            ConfigFileReader.ConfigFile configFile = ConfigFileReader.parseDefault();
+            AuthenticationDetailsProvider provider = new ConfigFileAuthenticationDetailsProvider(configFile);
+            ObjectStorage client = ObjectStorageClient.builder().build(provider);
+
+            // 3. Gửi lệnh "Trảm"
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                    .namespaceName(namespace)
+                    .bucketName(bucketName)
+                    .objectName(objectName)
+                    .build();
+
+            client.deleteObject(deleteObjectRequest);
+            client.close();
+
+            System.out.println("Đã dọn dẹp ảnh trên Oracle: " + objectName);
+
+        } catch (Exception e) {
+            // Dùng try-catch để lỡ ảnh đã bị xóa tay trên web Oracle rồi thì code không bị văng lỗi sập server
+            System.err.println("Lỗi khi xóa ảnh trên Oracle (có thể file không còn tồn tại): " + e.getMessage());
+        }
     }
 
 

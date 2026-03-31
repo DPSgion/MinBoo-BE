@@ -56,7 +56,9 @@ public class PostService {
         post.setUserId(userId);
         post.setContent(hasContent ? request.getContent().trim() : null);
         post.setUrlImg(imageUrl);
-        post.setPrivacy(request.getPrivacy());
+        if (request.getPrivacy() != null) {
+            post.setPrivacy(request.getPrivacy().trim().toLowerCase());
+        }
 
         // Lưu Post để có ID
         Post savedPost = postRepository.save(post);
@@ -77,13 +79,19 @@ public class PostService {
 
         return savedPost;
     }
+
     //xóa bài viết
+    @Transactional
     public void deletePost(UUID postID){
         //kt xem postID có tồn tại không
-        if(!postRepository.existsById(postID)){
-            throw new RuntimeException("POST_NOT_FOUND");
+        Post post = postRepository.findById(postID)
+                .orElseThrow(()-> new RuntimeException("POST_NOT_FOUND"));
+        //Xóa file ảnh trên Oracle
+        if (post.getUrlImg() != null) {
+            imageStorageService.deleteImageByUrl(post.getUrlImg());
         }
-        postRepository.deleteById(postID);
+        //Xóa bài viết trong Database
+        postRepository.delete(post);
     }
 
 }
