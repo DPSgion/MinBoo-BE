@@ -53,4 +53,35 @@ public class PostController {
         return ResponseEntity.ok(responseBody);
 
     }
+
+    //Sửa bài viết
+    @PatchMapping(value = "/{post_id}", consumes = {"multipart/form-data"})
+    public ResponseEntity<Map<String, Object>> updatePost(
+            @PathVariable("post_id") UUID postId,
+            @ModelAttribute CreatePostRequest request) {
+
+        PostResponse postResponse = postService.updatePost(postId, request, HARDCODED_USER_ID);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", postResponse);
+        response.put("message", "Post updated successfully");
+
+        return ResponseEntity.ok(response);
+    }
+
+    // Xóa riêng tấm ảnh của một bài viết
+    @DeleteMapping("/{post_id}/image")
+    public ResponseEntity<?> deletePostImage(@PathVariable("post_id") UUID postId) {
+
+        // Giao toàn bộ việc nặng nhọc cho Service xử lý
+        postService.deletePostImage(postId);
+
+        // Trả kết quả về cho Frontend/Postman
+        Map<String, Object> responseBody = new HashMap<>();
+        responseBody.put("success", true);
+        responseBody.put("message", "Post delete images successfully");
+
+        return ResponseEntity.ok(responseBody);
+    }
 }
