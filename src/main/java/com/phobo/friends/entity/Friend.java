@@ -12,32 +12,23 @@ import java.time.LocalDateTime;
 @Setter
 @Getter
 @Entity
-@Table(name = "friends_request", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"from_id_a", "to_id_b"})
+@Table(name = "friends", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"user_id_a", "user_id_b"})
 })
-public class FriendShip {
-
-    public enum FriendStatus { PENDING, ACCEPTED, REJECTED }
+public class Friend {
 
     @Id
-    @Column(name = "friend_request_id")
+    @Column(name = "friend_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Integer friendRequestId;
+    Integer friendId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "from_id_a")
-    User requester;
+    @JoinColumn(name = "user_id_a")
+    User user1;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "to_id_b")
-    User receiver;
-
-    @Column(name = "message")
-    String message;
-
-    @Column(name = "status")
-    @Enumerated(EnumType.STRING)
-    FriendStatus status;
+    @JoinColumn(name = "user_id_b")
+    User user2;
 
     @Column(name = "created_at", updatable = false)
     @CreationTimestamp

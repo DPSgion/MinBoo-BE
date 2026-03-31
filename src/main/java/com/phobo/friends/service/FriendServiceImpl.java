@@ -4,8 +4,10 @@ import com.phobo.common.exception.BusinessException;
 import com.phobo.common.exception.ResourceNotFoundException;
 import com.phobo.friends.dto.FriendRequest;
 import com.phobo.friends.dto.FriendResponse;
-import com.phobo.friends.entity.FriendShip;
+import com.phobo.friends.entity.Friend;
+import com.phobo.friends.entity.FriendRequestEntity;
 import com.phobo.friends.repository.FriendRepository;
+import com.phobo.friends.repository.FriendRequestRepository;
 import com.phobo.user.entity.User;
 import com.phobo.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -18,70 +20,58 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class FriendServiceImpl implements FriendService{
+public class FriendServiceImpl implements FriendService {
 
     private final UserRepository userRepository;
     private final FriendRepository friendRepository;
+    private final FriendRequestRepository friendRequestRepository;
 
-    public FriendServiceImpl(UserRepository userRepository, FriendRepository friendRepository) {
+    public FriendServiceImpl(UserRepository userRepository, FriendRepository friendRepository, FriendRequestRepository friendRequestRepository) {
         this.userRepository = userRepository;
         this.friendRepository = friendRepository;
+        this.friendRequestRepository = friendRequestRepository;
     }
 
     @Override
     public List<FriendResponse> getFriends() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
         User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: ", username));
 
-        List<FriendShip> friendShips = friendRepository.getFriendList(currentUser);
+        List<Friend> friends = friendRepository.getFriendList(currentUser);
 
-        return friendShips.stream()
+        return friends.stream()
                 .map(f -> new FriendResponse(
-                        f.getFriendRequestId(),
-                        f.getRequester().getId(),
-                        f.getRequester().getName(),
-                        f.getReceiver().getId(),
-                        f.getReceiver().getName(),
-                        f.getMessage(),
-                        f.getStatus().name(),
+                        f.getFriendId(),
+                        f.getUser1().getId(),
+                        f.getUser1().getName(),
+                        f.getUser2().getId(),
+                        f.getUser2().getName(),
+                        "Đã là bạn bè", // Không có message ở bảng Friends
+                        "ACCEPTED",
                         f.getCreatedAt(),
                         f.getUpdatedAt()
                 ))
                 .toList();
-
     }
 
     @Override
     public List<FriendResponse> getSendFriendRequests() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
         User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found", username));
 
-        List<FriendShip> sendRequests = friendRepository.findAllByRequesterAndStatusOrderByCreatedAtDesc(
-                currentUser, FriendShip.FriendStatus.PENDING);
+        List<FriendRequestEntity> sendRequests = friendRequestRepository.findAllByRequesterAndStatusOrderByCreatedAtDesc(
+                currentUser, FriendRequestEntity.RequestStatus.PENDING);
 
         return sendRequests.stream()
-                .map(f -> new FriendResponse(
-                        f.getFriendRequestId(),
-                        f.getRequester().getId(),
-                        f.getRequester().getName(),
-                        f.getReceiver().getId(),
-                        f.getReceiver().getName(),
-                        f.getMessage(),
-                        f.getStatus().name(),
-                        f.getCreatedAt(),
-                        f.getUpdatedAt()
-                ))
+                .map(this::mapToResponse)
                 .toList();
     }
 
     @Override
     public FriendResponse sendFriendRequest(FriendRequest friendRequest, UUID receiver) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
         User requesterUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Sender data not found. ", username));
 
@@ -92,28 +82,24 @@ public class FriendServiceImpl implements FriendService{
         User receiverUser = userRepository.findById(receiver)
                 .orElseThrow(() -> new ResourceNotFoundException("The receiver does not exist.", receiver));
 
+        // 1. Kiểm tra bảng Friends (Đã là bạn chưa?)
+        if (friendRepository.existsFriendshipBetween(requesterUser.getId(), receiver)) {
+            throw new BusinessException(400, "Both of you were friends !");
+        }
 
-        Optional<FriendShip> existingFriendship = friendRepository.findFriendshipBetween(requesterUser.getId(), receiver);
+        // 2. Kiểm tra bảng FriendRequest (Có lời mời nào đang kẹt không?)
+        Optional<FriendRequestEntity> existingRequest = friendRequestRepository.findRequestBetween(requesterUser.getId(), receiver);
 
-        if (existingFriendship.isPresent()) {
-            FriendShip friendship = existingFriendship.get();
+        if (existingRequest.isPresent()) {
+            FriendRequestEntity requestEntity = existingRequest.get();
 
-            // Scenario 1: If both were friends
-            if (friendship.getStatus() == FriendShip.FriendStatus.ACCEPTED) {
-                throw new BusinessException(400, "Both of you were friends !");
-            }
-
-            // Scenario 2: Pending
-            if (friendship.getStatus() == FriendShip.FriendStatus.PENDING) {
+            if (requestEntity.getStatus() == FriendRequestEntity.RequestStatus.PENDING) {
                 throw new BusinessException(400, "Request is pending !");
             }
 
-            // Scenario 3: Request Again after rejected or was rejected
-            if (friendship.getStatus() == FriendShip.FriendStatus.REJECTED) {
-
-                // 1. Check Cooldown (3 days)
-                // Get lastest update (when rejected), if not, get createdAt
-                LocalDateTime lastInteraction = friendship.getUpdatedAt() != null ? friendship.getUpdatedAt() : friendship.getCreatedAt();
+            if (requestEntity.getStatus() == FriendRequestEntity.RequestStatus.REJECTED) {
+                // Kiểm tra Cooldown 3 ngày
+                LocalDateTime lastInteraction = requestEntity.getUpdatedAt() != null ? requestEntity.getUpdatedAt() : requestEntity.getCreatedAt();
                 long daysSinceRejected = java.time.temporal.ChronoUnit.DAYS.between(lastInteraction, LocalDateTime.now());
 
                 if (daysSinceRejected < 3) {
@@ -121,70 +107,39 @@ public class FriendServiceImpl implements FriendService{
                     throw new BusinessException(400, "You have been rejected, or you recently rejected this request ! Please try again after " + daysLeft + " more days !");
                 }
 
-                // 2. If pass through 3 days -> Allow request again
-                friendship.setRequester(requesterUser);
-                friendship.setReceiver(receiverUser);
-                friendship.setMessage(friendRequest.message());
-                friendship.setStatus(FriendShip.FriendStatus.PENDING);
+                // Tái chế (Update dòng cũ)
+                requestEntity.setRequester(requesterUser);
+                requestEntity.setReceiver(receiverUser);
+                requestEntity.setMessage(friendRequest.message());
+                requestEntity.setStatus(FriendRequestEntity.RequestStatus.PENDING);
 
-                friendRepository.save(friendship);
-
-                return new FriendResponse(
-                        friendship.getFriendRequestId(),
-                        friendship.getRequester().getId(),
-                        friendship.getRequester().getName(),
-                        friendship.getReceiver().getId(),
-                        friendship.getReceiver().getName(),
-                        friendship.getMessage(),
-                        friendship.getStatus().name(),
-                        friendship.getCreatedAt(),
-                        friendship.getUpdatedAt()
-                );
+                FriendRequestEntity savedRequest = friendRequestRepository.save(requestEntity);
+                return mapToResponse(savedRequest);
             }
         }
 
-        FriendShip newFriend = new FriendShip();
-        newFriend.setRequester(requesterUser);
-        newFriend.setReceiver(receiverUser);
-        newFriend.setStatus(FriendShip.FriendStatus.PENDING);
-        newFriend.setMessage(friendRequest.message());
+        // 3. Nếu qua hết các vòng kiểm tra -> Tạo Request mới
+        FriendRequestEntity newRequest = new FriendRequestEntity();
+        newRequest.setRequester(requesterUser);
+        newRequest.setReceiver(receiverUser);
+        newRequest.setStatus(FriendRequestEntity.RequestStatus.PENDING);
+        newRequest.setMessage(friendRequest.message());
 
-        FriendShip savedFriend = friendRepository.save(newFriend);
-
-        return new FriendResponse(
-                savedFriend.getFriendRequestId(),
-                savedFriend.getRequester().getId(),
-                savedFriend.getRequester().getName(),
-                savedFriend.getReceiver().getId(),
-                savedFriend.getReceiver().getName(),
-                savedFriend.getMessage(),
-                savedFriend.getStatus().name(),
-                savedFriend.getCreatedAt(),
-                savedFriend.getCreatedAt() != null ? savedFriend.getCreatedAt() : LocalDateTime.now()
-        );
+        FriendRequestEntity savedRequest = friendRequestRepository.save(newRequest);
+        return mapToResponse(savedRequest);
     }
 
     @Override
     public List<FriendResponse> getPendingRequests() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
         User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: ", username));
 
-        List<FriendShip> requests = friendRepository.findAllByReceiverAndStatusOrderByCreatedAtDesc(currentUser, FriendShip.FriendStatus.PENDING);
+        List<FriendRequestEntity> requests = friendRequestRepository.findAllByReceiverAndStatusOrderByCreatedAtDesc(
+                currentUser, FriendRequestEntity.RequestStatus.PENDING);
 
         return requests.stream()
-                .map(f -> new FriendResponse(
-                        f.getFriendRequestId(),
-                        f.getRequester().getId(),
-                        f.getRequester().getName(),
-                        f.getReceiver().getId(),
-                        f.getReceiver().getName(),
-                        f.getMessage(),
-                        f.getStatus().name(),
-                        f.getCreatedAt(),
-                        f.getUpdatedAt()
-                ))
+                .map(this::mapToResponse)
                 .toList();
     }
 
@@ -192,35 +147,51 @@ public class FriendServiceImpl implements FriendService{
     @Override
     public FriendResponse acceptFriendRequest(Integer requestId) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
         User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found ", username));
 
-        FriendShip pendingFriendship = friendRepository.findById(requestId)
+        // 1. Lấy lời mời từ bảng Request
+        FriendRequestEntity pendingRequest = friendRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request not found with ID: ", requestId));
 
-        if (!currentUser.getUsername().equals(pendingFriendship.getReceiver().getUsername())){
+        if (!currentUser.getUsername().equals(pendingRequest.getReceiver().getUsername())) {
             throw new BusinessException(403, "You are not the receiver ! You don't have permission to accept or reject this invitation.");
         }
 
-        if (pendingFriendship.getStatus() != FriendShip.FriendStatus.PENDING) {
+        if (pendingRequest.getStatus() != FriendRequestEntity.RequestStatus.PENDING) {
             throw new BusinessException(400, "This invitation has already been processed or is no longer valid.");
         }
 
-        pendingFriendship.setStatus(FriendShip.FriendStatus.ACCEPTED);
+        // 2. Xóa khỏi bảng Request
+        friendRequestRepository.delete(pendingRequest);
 
-        friendRepository.save(pendingFriendship);
+        // 3. Chèn vào bảng Friends (Ép sang String để so sánh chuẩn xác với Database)
+        Friend friend = new Friend();
+        String requesterIdStr = pendingRequest.getRequester().getId().toString();
+        String receiverIdStr = pendingRequest.getReceiver().getId().toString();
 
+        // Ép sang toString() để so sánh theo bảng chữ cái
+        if (requesterIdStr.compareTo(receiverIdStr) < 0) {
+            friend.setUser1(pendingRequest.getRequester());
+            friend.setUser2(pendingRequest.getReceiver());
+        } else {
+            friend.setUser1(pendingRequest.getReceiver());
+            friend.setUser2(pendingRequest.getRequester());
+        }
+
+        Friend savedFriend = friendRepository.save(friend);
+
+        // 4. Trả về DTO như cũ để Frontend không báo lỗi
         return new FriendResponse(
-                pendingFriendship.getFriendRequestId(),
-                pendingFriendship.getRequester().getId(),
-                pendingFriendship.getRequester().getName(),
-                pendingFriendship.getReceiver().getId(),
-                pendingFriendship.getReceiver().getName(),
-                pendingFriendship.getMessage(),
-                pendingFriendship.getStatus().name(),
-                pendingFriendship.getCreatedAt(),
-                pendingFriendship.getUpdatedAt()
+                pendingRequest.getFriendRequestId(),
+                pendingRequest.getRequester().getId(),
+                pendingRequest.getRequester().getName(),
+                pendingRequest.getReceiver().getId(),
+                pendingRequest.getReceiver().getName(),
+                pendingRequest.getMessage(),
+                "ACCEPTED",
+                savedFriend.getCreatedAt(),
+                savedFriend.getUpdatedAt() != null ? savedFriend.getUpdatedAt() : savedFriend.getCreatedAt()
         );
     }
 
@@ -228,61 +199,59 @@ public class FriendServiceImpl implements FriendService{
     @Override
     public FriendResponse rejectFriendRequest(Integer requestId) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
         User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found ", username));
 
-        FriendShip pendingFriendship = friendRepository.findById(requestId)
+        FriendRequestEntity pendingRequest = friendRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request not found with ID: ", requestId));
 
-        if (!currentUser.getUsername().equals(pendingFriendship.getReceiver().getUsername())){
+        if (!currentUser.getUsername().equals(pendingRequest.getReceiver().getUsername())) {
             throw new BusinessException(403, "You are not the receiver ! You don't have permission to accept or reject this invitation.");
         }
 
-        if (pendingFriendship.getStatus() != FriendShip.FriendStatus.PENDING) {
+        if (pendingRequest.getStatus() != FriendRequestEntity.RequestStatus.PENDING) {
             throw new BusinessException(400, "This invitation has already been processed or is no longer valid.");
         }
 
-        pendingFriendship.setStatus(FriendShip.FriendStatus.REJECTED);
+        // Cập nhật trạng thái thành REJECTED thay vì xóa để giữ thời gian Cooldown
+        pendingRequest.setStatus(FriendRequestEntity.RequestStatus.REJECTED);
+        FriendRequestEntity savedRequest = friendRequestRepository.save(pendingRequest);
 
-        friendRepository.save(pendingFriendship);
-
-        return new FriendResponse(
-                pendingFriendship.getFriendRequestId(),
-                pendingFriendship.getRequester().getId(),
-                pendingFriendship.getRequester().getName(),
-                pendingFriendship.getReceiver().getId(),
-                pendingFriendship.getReceiver().getName(),
-                pendingFriendship.getMessage(),
-                pendingFriendship.getStatus().name(),
-                pendingFriendship.getCreatedAt(),
-                pendingFriendship.getUpdatedAt()
-        );
+        return mapToResponse(savedRequest);
     }
 
     @Transactional
     @Override
     public String unfriendRequest(UUID friendId) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
         User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: ", username));
 
-        FriendShip friendShip = friendRepository.findFriendshipBetween(currentUser.getId(), friendId)
+        // Rất nhàn: Chỉ cần dò trong bảng Friends, không cần check Enum nữa
+        Friend friendShip = friendRepository.findFriendshipBetween(currentUser.getId(), friendId)
                 .orElseThrow(() -> new BusinessException(400, "Relationship not found"));
 
-        if (friendShip.getStatus() != FriendShip.FriendStatus.ACCEPTED){
-            throw new BusinessException(403, "Both of you aren't friends so you can't unfriend");
-        }
-
-        String friendName = friendShip.getRequester().getId().equals(friendId)
-                ? friendShip.getRequester().getName()
-                : friendShip.getReceiver().getName();
+        String friendName = friendShip.getUser1().getId().equals(friendId)
+                ? friendShip.getUser1().getName()
+                : friendShip.getUser2().getName();
 
         friendRepository.delete(friendShip);
 
         return "Unfriend with " + friendName + " successfully !";
     }
 
-
+    // --- Hàm tiện ích gom logic map ra DTO để code Controller sạch đẹp ---
+    private FriendResponse mapToResponse(FriendRequestEntity f) {
+        return new FriendResponse(
+                f.getFriendRequestId(),
+                f.getRequester().getId(),
+                f.getRequester().getName(),
+                f.getReceiver().getId(),
+                f.getReceiver().getName(),
+                f.getMessage(),
+                f.getStatus().name(),
+                f.getCreatedAt(),
+                f.getUpdatedAt() != null ? f.getUpdatedAt() : (f.getCreatedAt() != null ? f.getCreatedAt() : LocalDateTime.now())
+        );
+    }
 }
