@@ -31,7 +31,7 @@ public class PostController {
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<Map<String, Object>> createPost(@ModelAttribute CreatePostRequest request) {
 
-        Post post = postService.createPost(request, HARDCODED_USER_ID);
+        PostResponse post = postService.createPost(request, HARDCODED_USER_ID);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);

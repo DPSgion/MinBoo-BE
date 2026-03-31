@@ -6,6 +6,7 @@ import com.phobo.post.dto.PostResponse;
 import com.phobo.post.entity.Post;
 import com.phobo.post.entity.PostTag;
 import com.phobo.post.entity.Tag;
+import com.phobo.post.mapper.PostMapper;
 import com.phobo.post.repository.PostRepository;
 import com.phobo.post.repository.PostTagRepository;
 import com.phobo.post.repository.TagRepository;
@@ -23,16 +24,18 @@ public class PostService {
     private final TagRepository tagRepository;
     private final PostTagRepository postTagRepository;
     private final ImageStorageService imageStorageService;
+    private final PostMapper postMapper;
 
-    public PostService(PostRepository postRepository, TagRepository tagRepository, PostTagRepository postTagRepository, ImageStorageService imageStorageService) {
+    public PostService(PostRepository postRepository, TagRepository tagRepository, PostTagRepository postTagRepository, ImageStorageService imageStorageService, PostMapper postMapper) {
         this.postRepository = postRepository;
         this.tagRepository = tagRepository;
         this.postTagRepository = postTagRepository;
         this.imageStorageService = imageStorageService;
+        this.postMapper = postMapper;
     }
 
     @Transactional
-    public Post createPost(CreatePostRequest request, UUID userId) {
+    public PostResponse createPost(CreatePostRequest request, UUID userId) {
         // Kiểm tra nội dung
         boolean hasContent = request.getContent() != null && !request.getContent().trim().isEmpty();
         boolean hasImage = request.getUrl_img() != null && !request.getUrl_img().isEmpty();
@@ -63,7 +66,7 @@ public class PostService {
         // Lưu Post để có ID
         Post savedPost = postRepository.save(post);
 
-        // Gán tags (nếu có)
+        // Gán tags
         if (request.getTag_ids() != null && !request.getTag_ids().isEmpty()) {
             List<Tag> tags = tagRepository.findAllById(request.getTag_ids());
             for (Tag tag : tags) {
@@ -77,7 +80,7 @@ public class PostService {
             }
         }
 
-        return savedPost;
+        return postMapper.toResponse(savedPost);
     }
 
     //xóa bài viết
