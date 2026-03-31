@@ -6,7 +6,6 @@ import com.phobo.user.dto.UserResponse;
 import com.phobo.user.dto.UserUpdatePasswordRequest;
 import com.phobo.user.dto.UserUpdateRequest;
 
-import java.util.Optional;
 import java.util.UUID;
 
 public interface UserService {
@@ -17,9 +16,9 @@ public interface UserService {
 
     UserResponse create(UserRequest createRequest);
 
-    UserResponse update(UserUpdateRequest updateRequest, UUID id);
+    UserResponse update(UserUpdateRequest updateRequest);
 
-    void updatePassword(UserUpdatePasswordRequest updatePasswordRequest, UUID id);
+    void updatePassword(UserUpdatePasswordRequest updatePasswordRequest);
 
     void deleteUser(UUID id);
 }
