@@ -2,6 +2,7 @@ package com.phobo.post.controller;
 
 import com.phobo.post.dto.CreatePostRequest;
 import com.phobo.post.dto.PostResponse;
+import com.phobo.post.dto.ReportRequest;
 import com.phobo.post.entity.Post;
 import com.phobo.post.service.PostService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -118,6 +119,24 @@ public class PostController {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("data", data);
+
+        return ResponseEntity.ok(response);
+    }
+
+    //báo cáo bài viết
+    @PostMapping("/{post_id}/report")
+    public ResponseEntity<Map<String, Object>> reportPost(
+            @RequestHeader("user-id") UUID userId,
+            @PathVariable("post_id") UUID postId,
+            @RequestBody ReportRequest request) {
+
+        // Gọi Service xử lý lưu báo cáo
+        postService.reportPost(postId, userId, request);
+
+        // Trả về JSON đúng chuẩn 200 OK
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Report submitted successfully");
 
         return ResponseEntity.ok(response);
     }

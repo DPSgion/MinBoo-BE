@@ -1,5 +1,8 @@
 package com.phobo.post.service;
 
+import com.phobo.post.dto.ReportRequest;
+import com.phobo.post.entity.Report;
+import com.phobo.post.repository.ReportRepository;
 import com.phobo.user.entity.User;
 import com.phobo.user.repository.UserRepository;
 import com.phobo.common.oci.ImageStorageService;
@@ -32,14 +35,16 @@ public class PostService {
     private final ImageStorageService imageStorageService;
     private final PostMapper postMapper;
     private final UserRepository userRepository;
+    private final ReportRepository reportRepository;
 
-    public PostService(PostRepository postRepository, TagRepository tagRepository, PostTagRepository postTagRepository, ImageStorageService imageStorageService, PostMapper postMapper, UserRepository userRepository) {
+    public PostService(PostRepository postRepository, TagRepository tagRepository, PostTagRepository postTagRepository, ImageStorageService imageStorageService, PostMapper postMapper, UserRepository userRepository, ReportRepository reportRepository) {
         this.postRepository = postRepository;
         this.tagRepository = tagRepository;
         this.postTagRepository = postTagRepository;
         this.imageStorageService = imageStorageService;
         this.postMapper = postMapper;
         this.userRepository = userRepository;
+        this.reportRepository = reportRepository;
     }
 
     @Transactional
@@ -375,6 +380,31 @@ public class PostService {
         data.put("pagination", pagination);
 
         return data;
+    }
+
+    //Report
+    @Transactional
+    public void reportPost(UUID postId, UUID userId, ReportRequest request) {
+        // 1. Kiểm tra bài viết có tồn tại không
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy bài viết để báo cáo"));
+
+        // 2. Kiểm tra tính hợp lệ của reason (Phòng trường hợp Hacker gửi sai định dạng)
+        String reason = request.getReason();
+        if (reason == null || (!reason.equals("inappropriate_content") && !reason.equals("spam") && !reason.equals("other"))) {
+            throw new RuntimeException("Lý do báo cáo không hợp lệ");
+        }
+
+        // 3. Tạo mới Report
+        Report report = new Report();
+        report.setPostId(post.getPostId()); // Hoặc report.setPost(post) tùy cách bạn khai báo Entity
+        report.setReportedBy(userId);       // Hoặc report.setUser(user)
+        report.setReason(reason);
+        report.setDescription(request.getDescription());
+        report.setStatus("pending");        // Mặc định trạng thái là chờ xử lý theo chuẩn DB
+
+        // 4. Lưu xuống Database
+        reportRepository.save(report);
     }
 
 }
