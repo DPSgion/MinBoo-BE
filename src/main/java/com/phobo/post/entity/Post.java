@@ -118,4 +118,6 @@ public class Post {
     public void setPostTags(Set<PostTag> postTags) {
         this.postTags = postTags;
     }
+
+
 }

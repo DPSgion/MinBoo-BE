@@ -1,7 +1,10 @@
 package com.phobo.post.service;
 
+import com.phobo.user.entity.User;
+import com.phobo.user.repository.UserRepository;
 import com.phobo.common.oci.ImageStorageService;
 import com.phobo.post.dto.CreatePostRequest;
+import com.phobo.post.dto.FeedPostDto;
 import com.phobo.post.dto.PostResponse;
 import com.phobo.post.entity.Post;
 import com.phobo.post.entity.PostTag;
@@ -11,12 +14,13 @@ import com.phobo.post.repository.PostRepository;
 import com.phobo.post.repository.PostTagRepository;
 import com.phobo.post.repository.TagRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,13 +31,15 @@ public class PostService {
     private final PostTagRepository postTagRepository;
     private final ImageStorageService imageStorageService;
     private final PostMapper postMapper;
+    private final UserRepository userRepository;
 
-    public PostService(PostRepository postRepository, TagRepository tagRepository, PostTagRepository postTagRepository, ImageStorageService imageStorageService, PostMapper postMapper) {
+    public PostService(PostRepository postRepository, TagRepository tagRepository, PostTagRepository postTagRepository, ImageStorageService imageStorageService, PostMapper postMapper, UserRepository userRepository) {
         this.postRepository = postRepository;
         this.tagRepository = tagRepository;
         this.postTagRepository = postTagRepository;
         this.imageStorageService = imageStorageService;
         this.postMapper = postMapper;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -201,6 +207,91 @@ public class PostService {
             post.setUrlImg(null);
             postRepository.save(post);
         }
+    }
+
+
+    public Map<String, Object> getHomeFeed(UUID userId, int page, int limit) {
+        // Trừ 1 vì Page trong Spring Boot bắt đầu từ số 0
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        Page<Post> postPage = postRepository.getFeedPosts(userId, pageable);
+
+        List<FeedPostDto> feedList = new ArrayList<>();
+        String baseUrl = "https://objectstorage.ap-singapore-1.oraclecloud.com/n/axqv9e1of21u/b/minboo-storage/o/";
+
+        for (Post post : postPage.getContent()) {
+            FeedPostDto dto = new FeedPostDto();
+            dto.setPostId(post.getPostId());
+            dto.setContent(post.getContent());
+            dto.setPrivacy(post.getPrivacy());
+            dto.setCreatedAt(post.getCreatedAt());
+            dto.setUpdatedAt(post.getUpdateAt());
+
+            // Link ảnh bài viết
+            if (post.getUrlImg() != null && !post.getUrlImg().isEmpty()) {
+                dto.setUrlImg(post.getUrlImg().startsWith("http") ? post.getUrlImg() : baseUrl + post.getUrlImg());
+            }
+
+            // 1. Tác giả
+            // (Đảm bảo bạn đã khai báo UserRepository trong class PostService)
+            userRepository.findById(post.getUserId()).ifPresent(author -> {
+                FeedPostDto.AuthorDto authorDto = new FeedPostDto.AuthorDto();
+                authorDto.setUserId(author.getId());
+                authorDto.setName(author.getName());
+                authorDto.setUrlAvt(author.getAvatar());
+                dto.setAuthor(authorDto);
+            });
+
+            // 2. Tags
+            if (post.getPostTags() != null) {
+                List<FeedPostDto.TagDto> tagDtos = post.getPostTags().stream().map(pt -> {
+                    FeedPostDto.TagDto t = new FeedPostDto.TagDto();
+                    t.setTagId(pt.getTag().getTagId());
+                    t.setTagName(pt.getTag().getTagName());
+                    return t;
+                }).collect(Collectors.toList());
+                dto.setTags(tagDtos);
+            }
+
+            // 3. Comment Count
+            dto.setCommentsCount(postRepository.countCommentsByPostId(post.getPostId()));
+
+            // 4. Reaction Count
+            List<Object[]> reactionData = postRepository.countReactionsByPostId(post.getPostId());
+            FeedPostDto.ReactionCountDto rCount = new FeedPostDto.ReactionCountDto();
+            long totalReacts = 0;
+            for (Object[] row : reactionData) {
+                String type = (String) row[0];
+                long count = ((Number) row[1]).longValue();
+                totalReacts += count;
+                switch (type.toLowerCase()) {
+                    case "like": rCount.setLike(count); break;
+                    case "love": rCount.setLove(count); break;
+                    case "haha": rCount.setHaha(count); break;
+                    case "sad": rCount.setSad(count); break;
+                    case "angry": rCount.setAngry(count); break;
+                }
+            }
+            rCount.setTotal(totalReacts);
+            dto.setReactionsCount(rCount);
+
+            // 5. My Reaction
+            String myReact = postRepository.getMyReaction(post.getPostId(), userId);
+            dto.setMyReaction(myReact);
+
+            feedList.add(dto);
+        }
+
+        // Đóng gói JSON Pagination
+        Map<String, Object> pagination = new HashMap<>();
+        pagination.put("page", page);
+        pagination.put("limit", limit);
+        pagination.put("total", postPage.getTotalElements());
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("posts", feedList);
+        data.put("pagination", pagination);
+
+        return data;
     }
 
 }

@@ -87,4 +87,20 @@ public class PostController {
 
         return ResponseEntity.ok(responseBody);
     }
+
+    //Bảng feed
+    @GetMapping("/feed")
+    public ResponseEntity<Map<String, Object>> getHomeFeed(
+            @RequestHeader("user-id") UUID userId,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "limit", defaultValue = "5") int limit) {
+
+        Map<String, Object> data = postService.getHomeFeed(userId, page, limit);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", data);
+
+        return ResponseEntity.ok(response);
+    }
 }
