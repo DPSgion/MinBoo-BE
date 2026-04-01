@@ -103,4 +103,22 @@ public class PostController {
 
         return ResponseEntity.ok(response);
     }
+
+    //Lấy bài viết của 1 user cụ thể
+    @GetMapping("/{user_id}/posts")
+    public ResponseEntity<Map<String, Object>> getUserPosts(
+            @RequestHeader("user-id") UUID viewerId, // Người đang xem (Lấy từ Header)
+            @PathVariable("user_id") UUID profileOwnerId, // ID của trang cá nhân đang được xem (Lấy từ URL)
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "limit", defaultValue = "5") int limit) {
+
+        // Truyền cả 2 ID vào cho Service xử lý
+        Map<String, Object> data = postService.getUserPosts(viewerId, profileOwnerId, page, limit);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", data);
+
+        return ResponseEntity.ok(response);
+    }
 }

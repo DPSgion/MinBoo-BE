@@ -39,4 +39,22 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     // Xem User hiện tại đã thả cảm xúc gì chưa
     @Query(value = "SELECT type FROM reactions WHERE post_id = :postId AND user_id = :userId LIMIT 1", nativeQuery = true)
     String getMyReaction(@Param("postId") UUID postId, @Param("userId") UUID userId);
+
+
+    // Lấy bài viết trên trang cá nhân của một User
+    @Query(value = "SELECT p.* FROM posts p " +
+            "WHERE p.deleted_at IS NULL " +
+            "AND p.user_id = :profileOwnerId " +
+            "AND (" +
+            "  :viewerId = :profileOwnerId " + // Trường hợp 1: Tự xem trang của chính mình (Thấy tất cả)
+            "  OR p.privacy = 'public' " +     // Trường hợp 2: Bài viết công khai (Ai cũng thấy)
+            "  OR (p.privacy = 'friends' AND EXISTS (" + // Trường hợp 3: Bài dành cho bạn bè
+            "      SELECT 1 FROM friends f WHERE " +
+            "      (f.user_id_a = :viewerId AND f.user_id_b = :profileOwnerId) OR " +
+            "      (f.user_id_a = :profileOwnerId AND f.user_id_b = :viewerId)" +
+            "  ))" +
+            ") ORDER BY p.created_at DESC",
+            countQuery = "SELECT count(*) FROM posts p WHERE p.deleted_at IS NULL AND p.user_id = :profileOwnerId AND (:viewerId = :profileOwnerId OR p.privacy = 'public' OR (p.privacy = 'friends' AND EXISTS (SELECT 1 FROM friends f WHERE (f.user_id_a = :viewerId AND f.user_id_b = :profileOwnerId) OR (f.user_id_a = :profileOwnerId AND f.user_id_b = :viewerId))))",
+            nativeQuery = true)
+    Page<Post> getUserProfilePosts(@Param("viewerId") UUID viewerId, @Param("profileOwnerId") UUID profileOwnerId, Pageable pageable);
 }
