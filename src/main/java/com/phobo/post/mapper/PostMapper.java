@@ -20,6 +20,7 @@ public class PostMapper {
         response.setContent(post.getContent());
         response.setPrivacy(post.getPrivacy());
         response.setCreatedAt(post.getCreatedAt());
+        response.setUpdateAt(post.getUpdateAt());
 
         // Ghép link ảnh
         if (post.getUrlImg() != null && !post.getUrlImg().isEmpty()) {

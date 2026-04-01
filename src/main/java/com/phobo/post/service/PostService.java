@@ -14,8 +14,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class PostService {
@@ -68,7 +70,14 @@ public class PostService {
 
         // Gán tags
         if (request.getTag_ids() != null && !request.getTag_ids().isEmpty()) {
-            List<Tag> tags = tagRepository.findAllById(request.getTag_ids());
+
+            // 1. Lọc bỏ các tag_id bị trùng lặp từ Postman (Ví dụ gửi [1, 1, 2] sẽ tự gộp thành [1, 2])
+            List<Integer> uniqueTagIds = request.getTag_ids().stream()
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            List<Tag> tags = tagRepository.findAllById(uniqueTagIds);
+
             for (Tag tag : tags) {
                 PostTag postTag = new PostTag();
                 // Sử dụng id đã được khởi tạo trong PostTag
@@ -76,8 +85,11 @@ public class PostService {
                 postTag.getId().setTagId(tag.getTagId());
                 postTag.setPost(savedPost);
                 postTag.setTag(tag);
-                postTagRepository.save(postTag);
+
+                savedPost.getPostTags().add(postTag);
             }
+
+            savedPost = postRepository.save(savedPost);
         }
 
         return postMapper.toResponse(savedPost);
@@ -160,6 +172,8 @@ public class PostService {
                 }
             }
         }
+        //Cập nhập thời gian
+        post.setUpdateAt(java.time.LocalDateTime.now());
 
         //Lưu thay đổi và dùng Mapper trả về
         Post updatedPost = postRepository.save(post);

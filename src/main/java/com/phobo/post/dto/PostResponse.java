@@ -10,6 +10,7 @@ public class PostResponse {
     private String urlImg;
     private String privacy;
     private LocalDateTime createdAt;
+    private LocalDateTime updateAt;
     private List<String> tags;
 
 
@@ -59,5 +60,13 @@ public class PostResponse {
 
     public void setTags(List<String> tags) {
         this.tags = tags;
+    }
+
+    public LocalDateTime getUpdateAt() {
+        return updateAt;
+    }
+
+    public void setUpdateAt(LocalDateTime updateAt) {
+        this.updateAt = updateAt;
     }
 }

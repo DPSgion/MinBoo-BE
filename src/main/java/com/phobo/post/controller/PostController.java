@@ -23,19 +23,21 @@ public class PostController {
         this.postService = postService;
     }
 
-    //test
-    private final UUID HARDCODED_USER_ID = UUID.fromString("7d99d30e-caeb-4e3a-aa81-cc5a7c58a1d2");
+
 
     //Tạo bài viết
     //@RequestBody khi FE gửi JSON thì rqbody sẽ biến nó thành object để thao tác
     @PostMapping(consumes = {"multipart/form-data"})
-    public ResponseEntity<Map<String, Object>> createPost(@ModelAttribute CreatePostRequest request) {
+    public ResponseEntity<Map<String, Object>> createPost(
+            @RequestHeader("user-id") UUID userId,
+            @ModelAttribute CreatePostRequest request) {
 
-        PostResponse post = postService.createPost(request, HARDCODED_USER_ID);
+        // Truyền userId nhận được vào Service
+        PostResponse postResponse = postService.createPost(request, userId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("data", post);
+        response.put("data", postResponse);
         response.put("message", "Post created successfully");
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -57,10 +59,11 @@ public class PostController {
     //Sửa bài viết
     @PatchMapping(value = "/{post_id}", consumes = {"multipart/form-data"})
     public ResponseEntity<Map<String, Object>> updatePost(
+            @RequestHeader("user-id") UUID userId,
             @PathVariable("post_id") UUID postId,
             @ModelAttribute CreatePostRequest request) {
 
-        PostResponse postResponse = postService.updatePost(postId, request, HARDCODED_USER_ID);
+        PostResponse postResponse = postService.updatePost(postId, request, userId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
