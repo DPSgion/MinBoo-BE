@@ -48,22 +48,20 @@ public class UserController {
         return userService.create(userRequest);
     }
 
-    @PatchMapping("/{id}")
+    @PatchMapping("/users/me")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public UserResponse updateUser(
-            @Valid @RequestBody UserUpdateRequest userUpdateRequest,
-            @PathVariable UUID id){
+            @Valid @RequestBody UserUpdateRequest userUpdateRequest){
 
-        return userService.update(userUpdateRequest, id);
+        return userService.update(userUpdateRequest);
     }
 
-    @PutMapping("/{id}/password")
+    @PutMapping("/users/me/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void updatePasswordUser(@Valid @RequestBody UserUpdatePasswordRequest userUpdatePasswordRequest,
-                                   @PathVariable UUID id){
-
-        userService.updatePassword(userUpdatePasswordRequest, id);
-
+    public void updatePasswordUser(
+            @Valid @RequestBody UserUpdatePasswordRequest userUpdatePasswordRequest
+    ){
+        userService.updatePassword(userUpdatePasswordRequest);
     }
 
     @DeleteMapping("/{id}")

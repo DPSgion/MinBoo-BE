@@ -14,10 +14,10 @@ import jakarta.transaction.Transactional;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -83,15 +83,17 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponse update(UserUpdateRequest userUpdateRequest, UUID id) {
+    public UserResponse update(UserUpdateRequest userUpdateRequest) {
 
-        User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        User existingUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: ", username));
 
 
         if (userUpdateRequest.phone() != null && !userUpdateRequest.phone().isBlank()) {
-            if (userRepository.existsByPhoneAndIdNot(userUpdateRequest.phone(), id)){
-                throw new BusinessException(409, "Phone already exists");
+            if (userRepository.existsByPhoneAndIdNot(userUpdateRequest.phone(), existingUser.getId())){
+                throw new BusinessException(409, "Phone already exists ! Please check your new phone");
             }
         }
 
@@ -102,9 +104,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void updatePassword(UserUpdatePasswordRequest userUpdatePasswordRequest, UUID id) {
-        User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+    public void updatePassword(UserUpdatePasswordRequest userUpdatePasswordRequest) {
+
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        User existingUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found", username));
 
         if (!userUpdatePasswordRequest.newPassword().equals(userUpdatePasswordRequest.confirmPassword())){
             throw new BusinessException(400, "New password don't match confirm password");
