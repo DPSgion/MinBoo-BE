@@ -59,7 +59,7 @@ public class PostServiceImpl implements PostService {
         String imageUrl = null;
         if (hasImage) {
             try {
-                imageUrl = imageStorageService.uploadImage(request.getUrl_img());
+                imageUrl = imageStorageService.uploadImage(request.getUrl_img(), "posts");
             }catch (Exception e){
                 throw new RuntimeException("Upload ảnh lên oracle thất bại: " + e.getMessage(), e);
             }
@@ -153,7 +153,7 @@ public class PostServiceImpl implements PostService {
 
             //Upload ảnh mới và lưu link mới vào DB
             try {
-                String newImageUrl = imageStorageService.uploadImage(request.getUrl_img());
+                String newImageUrl = imageStorageService.uploadImage(request.getUrl_img(), "posts");
                 post.setUrlImg(newImageUrl);
             } catch (Exception e) {
                 throw new RuntimeException("Upload ảnh mới thất bại: " + e.getMessage(), e);

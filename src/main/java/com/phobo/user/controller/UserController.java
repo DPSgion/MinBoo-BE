@@ -9,8 +9,10 @@ import com.phobo.user.dto.UserUpdateRequest;
 import com.phobo.user.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,7 +49,7 @@ public class UserController {
         return userService.create(userRequest);
     }
 
-    @PatchMapping("/users/me")
+    @PatchMapping("/me")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public UserResponse updateUser(
             @Valid @RequestBody UserUpdateRequest userUpdateRequest){
@@ -55,7 +57,15 @@ public class UserController {
         return userService.update(userUpdateRequest);
     }
 
-    @PutMapping("/users/me/password")
+    @PutMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UserResponse> updateAvatar(
+            @RequestParam(value = "file", required = false) MultipartFile file
+    ) {
+        UserResponse response = userService.updateAvatar(file);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/me/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updatePasswordUser(
             @Valid @RequestBody UserUpdatePasswordRequest userUpdatePasswordRequest

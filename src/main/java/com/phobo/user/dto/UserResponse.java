@@ -9,7 +9,7 @@ public record UserResponse(
     String username,
     String email,
     String phone,
-    String sex,
+    Integer sex,
     String address,
     LocalDate birth,
     String avatar
