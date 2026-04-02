@@ -2,19 +2,13 @@ package com.phobo.tag.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.Setter;
 
-import java.util.UUID;
-
+@Getter
+@Setter
 public class TagRequest {
     @NotBlank(message = "Tên tag không được để trống")
     @JsonProperty("tag_name")
     private String tagName;
-
-    public String getTagName() {
-        return tagName;
-    }
-
-    public void setTagName(String tagName) {
-        this.tagName = tagName;
-    }
 }

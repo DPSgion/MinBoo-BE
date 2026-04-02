@@ -3,7 +3,7 @@ POST http://localhost:8080/tags
 Content-Type: application/json
 
 {
-  "tag_name": "ooooooPPP"
+  "tag_name": "ooooooPPPL"
 }
 
 ### 2. Test tạo Tag bị trùng để xem có bắt lỗi 409 không (Chạy lại request POST)

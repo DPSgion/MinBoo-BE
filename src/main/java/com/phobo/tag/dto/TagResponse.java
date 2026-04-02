@@ -1,10 +1,19 @@
 package com.phobo.tag.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.ZonedDateTime;
 
+@Getter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class TagResponse {
 
     @JsonProperty("tag_id")
@@ -15,13 +24,4 @@ public class TagResponse {
 
     @JsonProperty("created_at")
     private ZonedDateTime createdAt;
-
-    public Integer getTagId() { return tagId; }
-    public void setTagId(Integer tagId) { this.tagId = tagId; }
-
-    public String getTagName() { return tagName; }
-    public void setTagName(String tagName) { this.tagName = tagName; }
-
-    public ZonedDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(ZonedDateTime createdAt) { this.createdAt = createdAt; }
 }
