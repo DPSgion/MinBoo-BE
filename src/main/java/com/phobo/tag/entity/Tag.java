@@ -1,5 +1,6 @@
 package com.phobo.tag.entity;
 
+import com.phobo.post.entity.PostTag;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -7,6 +8,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.ZonedDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "tags")
@@ -25,4 +28,7 @@ public class Tag {
 
     @Column(name = "created_at", insertable = false)
     private ZonedDateTime createdAt;
+
+    @OneToMany(mappedBy = "tag", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<PostTag> postTags = new HashSet<>();
 }
