@@ -5,6 +5,7 @@ import com.phobo.auth.dto.AuthResponse;
 import com.phobo.auth.dto.RegisterRequest;
 import com.phobo.auth.dto.RegisterResponse;
 import com.phobo.common.exception.BusinessException;
+import com.phobo.common.oci.ImageStorageService;
 import com.phobo.security.JwtUtil;
 import com.phobo.user.entity.User;
 import com.phobo.user.repository.UserRepository;
@@ -24,12 +25,14 @@ class AuthServiceImpl implements AuthService {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ImageStorageService imageStorageService;
 
-    public AuthServiceImpl(AuthenticationManager authenticationManager, JwtUtil jwtUtil, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AuthServiceImpl(AuthenticationManager authenticationManager, JwtUtil jwtUtil, UserRepository userRepository, PasswordEncoder passwordEncoder, ImageStorageService imageStorageService) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.imageStorageService = imageStorageService;
     }
 
     @Override
@@ -70,8 +73,20 @@ class AuthServiceImpl implements AuthService {
         user.setSex(registerRequest.sex() != null ? registerRequest.sex() : 0);
         user.setBirth(registerRequest.birth());
         user.setAddress(registerRequest.address());
-        user.setAvatar(registerRequest.avatar() != null && !registerRequest.avatar().isBlank() ? registerRequest.avatar() : "https://default-avatar-url.png");
 
+        String avatarInput = "";
+
+        if (registerRequest.avatar() == null || registerRequest.avatar().isEmpty()) {
+            avatarInput = "https://api.dicebear.com/8.x/adventurer/svg?seed=" + registerRequest.username();
+        } else {
+            try {
+                avatarInput = imageStorageService.uploadImage(registerRequest.avatar(), "avatars");
+            }
+            catch (Exception e) {
+                throw new BusinessException(500, "Error uploading avatar image to Cloud: " + e.getMessage());
+            }
+        }
+        user.setAvatar(avatarInput);
         User savedUser = userRepository.save(user);
 
         return new RegisterResponse(

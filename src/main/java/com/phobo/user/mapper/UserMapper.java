@@ -10,9 +10,11 @@ import org.mapstruct.*;
 public interface UserMapper {
 
     // Outbound: Entity to DTO
+
     UserResponse toResponse(User user);
 
     // Inbound: DTO to Entity
+    @Mapping(target = "avatar", ignore = true)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "password", ignore = true)
     User toEntity(UserRequest request);

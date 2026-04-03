@@ -7,6 +7,7 @@ import com.oracle.bmc.objectstorage.ObjectStorage;
 import com.oracle.bmc.objectstorage.ObjectStorageClient;
 import com.oracle.bmc.objectstorage.requests.DeleteObjectRequest;
 import com.oracle.bmc.objectstorage.requests.PutObjectRequest;
+import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,21 +24,22 @@ public class ImageStorageService {
     private final String namespace = "axqv9e1of21u";
     private final String bucketName = "minboo-storage";
     private final String region = "ap-singapore-1";
+    private final ObjectStorage client;
 
-    public String uploadImage(MultipartFile file) throws Exception {
+    public ImageStorageService() throws Exception {
         ConfigFileReader.ConfigFile configFile = ConfigFileReader.parseDefault();
         AuthenticationDetailsProvider provider = new ConfigFileAuthenticationDetailsProvider(configFile);
-        ObjectStorage client = ObjectStorageClient.builder().build(provider);
+        this.client = ObjectStorageClient.builder().build(provider);
+    }
 
-        // Lấy tên gốc của file
+    public String uploadImage(MultipartFile file, String folderName) throws Exception {
         String originalFilename = file.getOriginalFilename();
 
-        // GỌI HÀM LÀM SẠCH TÊN FILE
         String safeFileName = sanitizeFileName(originalFilename);
 
-        // Nối UUID với cái tên đã sạch sẽ
         String rawFileName = UUID.randomUUID().toString() + "_" + safeFileName;
-        String objectName = "posts/" + rawFileName;
+
+        String objectName = folderName + "/" + rawFileName;
 
         String contentType = file.getContentType();
 
@@ -63,7 +65,6 @@ public class ImageStorageService {
                 .build();
 
         client.putObject(putObjectRequest);
-        client.close();
 
         return getPublicImageUrl(objectName);
     }
@@ -71,6 +72,19 @@ public class ImageStorageService {
 
         return String.format("https://objectstorage.%s.oraclecloud.com/n/%s/b/%s/o/%s",
                 region, namespace, bucketName, objectName);
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        try {
+            if (this.client != null) {
+                System.out.println("Cleaning and disconnect with Oracle Cloud...");
+                this.client.close();
+                System.out.println("Disconnected successfully !");
+            }
+        } catch (Exception e) {
+            System.err.println("There are errors when close Oracle Client: " + e.getMessage());
+        }
     }
 
 
@@ -105,7 +119,6 @@ public class ImageStorageService {
                     .build();
 
             client.deleteObject(deleteObjectRequest);
-            client.close();
 
             System.out.println("Đã dọn dẹp ảnh trên Oracle: " + objectName);
 

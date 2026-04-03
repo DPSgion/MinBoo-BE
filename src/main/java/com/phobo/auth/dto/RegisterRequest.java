@@ -2,6 +2,7 @@ package com.phobo.auth.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 
@@ -24,6 +25,6 @@ public record RegisterRequest(
         Integer sex, // Must default = 0 or = 1 in UI
         LocalDate birth,
         String address,
-        String avatar
+        MultipartFile avatar
 ) {
 }

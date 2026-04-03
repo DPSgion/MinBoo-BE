@@ -2,6 +2,7 @@ package com.phobo.user.service;
 
 import com.phobo.common.exception.BusinessException;
 import com.phobo.common.exception.ResourceNotFoundException;
+import com.phobo.common.oci.ImageStorageService;
 import com.phobo.common.response.PageResponse;
 import com.phobo.user.dto.UserRequest;
 import com.phobo.user.dto.UserResponse;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -26,11 +28,13 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final ImageStorageService imageStorageService;
 
-    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder, ImageStorageService imageStorageService) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
+        this.imageStorageService = imageStorageService;
     }
 
     @Override
@@ -74,6 +78,21 @@ public class UserServiceImpl implements UserService {
 
         User user = userMapper.toEntity(userRequest);
 
+        String avatarInput = "";
+
+        if (userRequest.avatar() == null || userRequest.avatar().isEmpty()) {
+            avatarInput = "https://api.dicebear.com/8.x/adventurer/svg?seed=" + userRequest.username();
+        } else {
+            try {
+                avatarInput = imageStorageService.uploadImage(userRequest.avatar(), "avatars");
+            }
+            catch (Exception e) {
+                throw new BusinessException(500, "Error uploading avatar image to Cloud: " + e.getMessage());
+            }
+        }
+
+        user.setAvatar(avatarInput);
+
         String hashedPassword = passwordEncoder.encode(userRequest.password());
 
         user.setPassword(hashedPassword);
@@ -88,7 +107,7 @@ public class UserServiceImpl implements UserService {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
 
         User existingUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: ", username));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found", username));
 
 
         if (userUpdateRequest.phone() != null && !userUpdateRequest.phone().isBlank()) {
@@ -100,6 +119,41 @@ public class UserServiceImpl implements UserService {
         userMapper.updateEntity(existingUser, userUpdateRequest);
 
         return userMapper.toResponse(userRepository.save(existingUser));
+    }
+
+    @Transactional
+    @Override
+    public UserResponse updateAvatar(MultipartFile fileAvatar) {
+
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        User existingUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found", username));
+
+
+        String oldAvatar = existingUser.getAvatar();
+        String avatarInput = "";
+
+        if (fileAvatar == null || fileAvatar.isEmpty()){
+
+            avatarInput = "https://api.dicebear.com/8.x/adventurer/svg?seed=" + existingUser.getUsername();
+
+        } else {
+
+            try {
+                avatarInput = imageStorageService.uploadImage(fileAvatar, "avatars");
+            } catch (Exception e) {
+                throw new BusinessException(500, "Error uploading avatar image to Cloud: " + e.getMessage());
+            }
+
+        }
+
+        imageStorageService.deleteImageByUrl(oldAvatar);
+
+        existingUser.setAvatar(avatarInput);
+        User savedUser = userRepository.save(existingUser);
+
+        return userMapper.toResponse(savedUser);
     }
 
     @Override

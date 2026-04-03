@@ -5,6 +5,7 @@ import com.phobo.user.dto.UserRequest;
 import com.phobo.user.dto.UserResponse;
 import com.phobo.user.dto.UserUpdatePasswordRequest;
 import com.phobo.user.dto.UserUpdateRequest;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -17,6 +18,8 @@ public interface UserService {
     UserResponse create(UserRequest createRequest);
 
     UserResponse update(UserUpdateRequest updateRequest);
+
+    public UserResponse updateAvatar(MultipartFile fileAvatar);
 
     void updatePassword(UserUpdatePasswordRequest updatePasswordRequest);
 

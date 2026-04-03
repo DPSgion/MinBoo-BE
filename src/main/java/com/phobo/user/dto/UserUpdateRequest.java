@@ -7,7 +7,6 @@ public record UserUpdateRequest(
         String phone,
         Integer sex,
         LocalDate birth,
-        String address,
-        String avatar
+        String address
 ) {
 }
