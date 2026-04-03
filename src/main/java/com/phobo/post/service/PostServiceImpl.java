@@ -1,5 +1,6 @@
 package com.phobo.post.service;
 
+import com.phobo.common.Moderation.ContentModerationService;
 import com.phobo.post.dto.ReportRequest;
 import com.phobo.post.entity.Report;
 import com.phobo.post.repository.ReportRepository;
@@ -34,8 +35,9 @@ public class PostServiceImpl implements PostService {
     private final PostMapper postMapper;
     private final UserRepository userRepository;
     private final ReportRepository reportRepository;
+    private final ContentModerationService contentModerationService;
 
-    public PostServiceImpl(PostRepository postRepository, TagRepository tagRepository, PostTagRepository postTagRepository, ImageStorageService imageStorageService, PostMapper postMapper, UserRepository userRepository, ReportRepository reportRepository) {
+    public PostServiceImpl(PostRepository postRepository, TagRepository tagRepository, PostTagRepository postTagRepository, ImageStorageService imageStorageService, PostMapper postMapper, UserRepository userRepository, ReportRepository reportRepository, ContentModerationService contentModerationService) {
         this.postRepository = postRepository;
         this.tagRepository = tagRepository;
         this.postTagRepository = postTagRepository;
@@ -43,6 +45,7 @@ public class PostServiceImpl implements PostService {
         this.postMapper = postMapper;
         this.userRepository = userRepository;
         this.reportRepository = reportRepository;
+        this.contentModerationService = contentModerationService;
     }
 
     @Transactional
@@ -54,6 +57,10 @@ public class PostServiceImpl implements PostService {
         if (!hasContent && !hasImage) {
             throw new IllegalArgumentException("Post phải có nội dung hoặc hình ảnh");
         }
+
+        //Kiểm duyệt
+        contentModerationService.moderateText(request.getContent());
+        contentModerationService.moderateImage(request.getUrl_img());
 
         // Upload ảnh lên oracle
         String imageUrl = null;
@@ -132,6 +139,7 @@ public class PostServiceImpl implements PostService {
 
         // Cập nhật Nội dung & Quyền riêng tư (Nếu người dùng có gửi lên thì mới sửa)
         if (request.getContent() != null) {
+            contentModerationService.moderateText(request.getContent()); //kiểm duyệt
             post.setContent(request.getContent().trim());
         }
         if (request.getPrivacy() != null) {
@@ -141,6 +149,7 @@ public class PostServiceImpl implements PostService {
         //XỬ LÝ ẢNH
         boolean hasNewImage = request.getUrl_img() != null && !request.getUrl_img().isEmpty();
         if (hasNewImage) {
+            contentModerationService.moderateImage(request.getUrl_img()); // kiểm duyệt trước
 
             if (post.getUrlImg() != null) {
                 try {

@@ -28,4 +28,8 @@ jobs:
             SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
             # SPRING_DATASOURCE_USERNAME: ${{ secrets.DB_USERNAME }}
             # SPRING_DATASOURCE_PASSWORD: ${{ secrets.DB_PASSWORD }}
+
+            OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+            SIGHTENGINE_API_USER: ${{ secrets.SIGHTENGINE_API_USER }}
+            SIGHTENGINE_API_SECRET: ${{ secrets.SIGHTENGINE_API_SECRET }}
         
