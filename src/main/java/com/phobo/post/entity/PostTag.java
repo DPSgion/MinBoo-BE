@@ -1,5 +1,6 @@
 package com.phobo.post.entity;
 
+import com.phobo.tag.entity.Tag;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.util.UUID;
