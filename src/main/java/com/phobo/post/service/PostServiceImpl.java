@@ -1,6 +1,7 @@
 package com.phobo.post.service;
 
 import com.phobo.common.Moderation.ContentModerationService;
+import com.phobo.common.exception.BusinessException;
 import com.phobo.post.dto.ReportRequest;
 import com.phobo.post.entity.Report;
 import com.phobo.post.repository.ReportRepository;
@@ -55,7 +56,7 @@ public class PostServiceImpl implements PostService {
         boolean hasImage = request.getUrl_img() != null && !request.getUrl_img().isEmpty();
 
         if (!hasContent && !hasImage) {
-            throw new IllegalArgumentException("Post phải có nội dung hoặc hình ảnh");
+            throw new BusinessException(400, "BAD_REQUEST_NO_CONTENT");
         }
 
         //Kiểm duyệt
@@ -116,7 +117,7 @@ public class PostServiceImpl implements PostService {
     public void deletePost(UUID postID){
         //kt xem postID có tồn tại không
         Post post = postRepository.findById(postID)
-                .orElseThrow(()-> new RuntimeException("POST_NOT_FOUND"));
+                .orElseThrow(() -> new BusinessException(404, "POST_NOT_FOUND"));
         //Xóa file ảnh trên Oracle
         if (post.getUrlImg() != null) {
             imageStorageService.deleteImageByUrl(post.getUrlImg());
@@ -130,11 +131,11 @@ public class PostServiceImpl implements PostService {
     public PostResponse updatePost(UUID postId, CreatePostRequest request, UUID userId) {
         // Tìm bài viết xem có tồn tại không
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy bài viết để sửa"));
+                .orElseThrow(() -> new BusinessException(404, "POST_NOT_FOUND"));
 
         // Kiểm tra quyền (Chỉ người tạo mới được phép sửa bài của mình)
         if (!post.getUserId().equals(userId)) {
-            throw new RuntimeException("Bạn không có quyền chỉnh sửa bài viết này");
+            throw new BusinessException(403, "FORBIDDEN");
         }
 
         // Cập nhật Nội dung & Quyền riêng tư (Nếu người dùng có gửi lên thì mới sửa)
@@ -203,7 +204,7 @@ public class PostServiceImpl implements PostService {
     public void deletePostImage(UUID postId) {
         // 1. Tìm bài viết trong Database
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy bài viết để xóa ảnh"));
+                .orElseThrow(() -> new BusinessException(404, "POST_NOT_FOUND"));
 
         // 2. Nếu bài viết có ảnh thì mới tiến hành xóa
         if (post.getUrlImg() != null) {
@@ -394,12 +395,12 @@ public class PostServiceImpl implements PostService {
     public void reportPost(UUID postId, UUID userId, ReportRequest request) {
         // 1. Kiểm tra bài viết có tồn tại không
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy bài viết để báo cáo"));
+                .orElseThrow(() -> new BusinessException(404, "POST_NOT_FOUND"));
 
         // 2. Kiểm tra tính hợp lệ của reason (Phòng trường hợp Hacker gửi sai định dạng)
         String reason = request.getReason();
         if (reason == null || (!reason.equals("inappropriate_content") && !reason.equals("spam") && !reason.equals("other"))) {
-            throw new RuntimeException("Lý do báo cáo không hợp lệ");
+            throw new BusinessException(400, "INVALID_REPORT_REASON");
         }
 
         // 3. Tạo mới Report
