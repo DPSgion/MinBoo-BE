@@ -1,4 +1,4 @@
-package com.phobo.chat.conversation.entity;
+package com.phobo.chat.entity;
 
 import com.phobo.user.entity.User;
 import jakarta.persistence.*;

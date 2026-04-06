@@ -1,6 +1,6 @@
-package com.phobo.chat.conversation.repository;
+package com.phobo.chat.repository;
 
-import com.phobo.chat.conversation.entity.Conversation;
+import com.phobo.chat.entity.Conversation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

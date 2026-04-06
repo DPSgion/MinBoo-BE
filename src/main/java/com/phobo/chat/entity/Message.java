@@ -1,6 +1,5 @@
-package com.phobo.chat.message.entity;
+package com.phobo.chat.entity;
 
-import com.phobo.chat.conversation.entity.Conversation;
 import com.phobo.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

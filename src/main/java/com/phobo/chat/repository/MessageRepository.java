@@ -1,6 +1,6 @@
-package com.phobo.chat.message.repository;
+package com.phobo.chat.repository;
 
-import com.phobo.chat.message.entity.Message;
+import com.phobo.chat.entity.Message;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
