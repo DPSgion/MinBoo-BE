@@ -7,6 +7,7 @@ import com.phobo.post.entity.Report;
 import com.phobo.post.repository.ReportRepository;
 import com.phobo.tag.entity.Tag;
 import com.phobo.tag.repository.TagRepository;
+import com.phobo.user.entity.User;
 import com.phobo.user.repository.UserRepository;
 import com.phobo.common.oci.ImageStorageService;
 import com.phobo.post.dto.CreatePostRequest;
@@ -50,7 +51,14 @@ public class PostServiceImpl implements PostService {
     }
 
     @Transactional
-    public PostResponse createPost(CreatePostRequest request, UUID userId) {
+    public PostResponse createPost(CreatePostRequest request, String username) {
+
+        // lay userId
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessException(404, "USER_NOT_FOUND"));
+
+        UUID userId = user.getId();
+
         // Kiểm tra nội dung
         boolean hasContent = request.getContent() != null && !request.getContent().trim().isEmpty();
         boolean hasImage = request.getUrl_img() != null && !request.getUrl_img().isEmpty();
@@ -128,7 +136,13 @@ public class PostServiceImpl implements PostService {
 
     // Hàm update
     @Transactional
-    public PostResponse updatePost(UUID postId, CreatePostRequest request, UUID userId) {
+    public PostResponse updatePost(UUID postId, CreatePostRequest request, String username) {
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessException(404, "USER_NOT_FOUND"));
+
+        UUID userId = user.getId();
+
         // Tìm bài viết xem có tồn tại không
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(404, "POST_NOT_FOUND"));
@@ -223,7 +237,13 @@ public class PostServiceImpl implements PostService {
     }
 
 
-    public Map<String, Object> getHomeFeed(UUID userId, int page, int limit) {
+    public Map<String, Object> getHomeFeed(String username, int page, int limit) {
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessException(404, "USER_NOT_FOUND"));
+
+        UUID userId = user.getId();
+
         // Trừ 1 vì Page trong Spring Boot bắt đầu từ số 0
         Pageable pageable = PageRequest.of(page - 1, limit);
         Page<Post> postPage = postRepository.getFeedPosts(userId, pageable);
@@ -308,7 +328,13 @@ public class PostServiceImpl implements PostService {
     }
 
     // Lấy bài viết cho Trang cá nhân
-    public Map<String, Object> getUserPosts(UUID viewerId, UUID profileOwnerId, int page, int limit) {
+    public Map<String, Object> getUserPosts(String viewername, UUID profileOwnerId, int page, int limit) {
+
+        User user = userRepository.findByUsername(viewername)
+                .orElseThrow(() -> new BusinessException(404, "USER_NOT_FOUND"));
+
+        UUID viewerId = user.getId();
+
         Pageable pageable = PageRequest.of(page - 1, limit);
 
         Page<Post> postPage = postRepository.getUserProfilePosts(viewerId, profileOwnerId, pageable);
@@ -392,7 +418,13 @@ public class PostServiceImpl implements PostService {
 
     //Report
     @Transactional
-    public void reportPost(UUID postId, UUID userId, ReportRequest request) {
+    public void reportPost(UUID postId, String username, ReportRequest request) {
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessException(404, "USER_NOT_FOUND"));
+
+        UUID userId = user.getId();
+
         // 1. Kiểm tra bài viết có tồn tại không
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(404, "POST_NOT_FOUND"));

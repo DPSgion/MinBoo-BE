@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -83,11 +84,12 @@ public class UserController {
     //Lấy bài viết của một user cụ thể
     @GetMapping("/{user_id}/posts") //
     public ResponseEntity<Map<String, Object>> getUserPosts(
-            @RequestHeader("user-id") UUID viewerId,
+
             @PathVariable("user_id") UUID profileOwnerId,
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "limit", defaultValue = "5") int limit) {
 
+        String viewerId = SecurityContextHolder.getContext().getAuthentication().getName();
         Map<String, Object> data = postService.getUserPosts(viewerId, profileOwnerId, page, limit);
 
         Map<String, Object> response = new HashMap<>();

@@ -6,6 +6,7 @@ import com.phobo.post.dto.ReportRequest;
 import com.phobo.post.service.PostService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -28,11 +29,13 @@ public class PostController {
     //@RequestBody khi FE gửi JSON thì rqbody sẽ biến nó thành object để thao tác
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<Map<String, Object>> createPost(
-            @RequestHeader("user-id") UUID userId,
             @ModelAttribute CreatePostRequest request) {
 
-        // Truyền userId nhận được vào Service
-        PostResponse postResponse = postService.createPost(request, userId);
+        // 1. Tự động lấy username từ Token
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // 2. Truyền username xuống Service
+        PostResponse postResponse = postService.createPost(request, username);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -58,11 +61,14 @@ public class PostController {
     //Sửa bài viết
     @PatchMapping(value = "/{post_id}", consumes = {"multipart/form-data"})
     public ResponseEntity<Map<String, Object>> updatePost(
-            @RequestHeader("user-id") UUID userId,
             @PathVariable("post_id") UUID postId,
             @ModelAttribute CreatePostRequest request) {
 
-        PostResponse postResponse = postService.updatePost(postId, request, userId);
+        // 1. Tự động lấy username từ Token
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+
+        PostResponse postResponse = postService.updatePost(postId,request, username);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -90,29 +96,14 @@ public class PostController {
     //Bảng feed
     @GetMapping("/feed")
     public ResponseEntity<Map<String, Object>> getHomeFeed(
-            @RequestHeader("user-id") UUID userId,
+
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "limit", defaultValue = "5") int limit) {
 
-        Map<String, Object> data = postService.getHomeFeed(userId, page, limit);
+        //Tự động lấy username từ Token
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Map<String, Object> data = postService.getHomeFeed(username, page, limit);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("data", data);
-
-        return ResponseEntity.ok(response);
-    }
-
-    //Lấy bài viết của 1 user cụ thể
-    @GetMapping("/{user_id}/posts")
-    public ResponseEntity<Map<String, Object>> getUserPosts(
-            @RequestHeader("user-id") UUID viewerId, // Người đang xem (Lấy từ Header)
-            @PathVariable("user_id") UUID profileOwnerId, // ID của trang cá nhân đang được xem (Lấy từ URL)
-            @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "limit", defaultValue = "5") int limit) {
-
-        // Truyền cả 2 ID vào cho Service xử lý
-        Map<String, Object> data = postService.getUserPosts(viewerId, profileOwnerId, page, limit);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -124,12 +115,15 @@ public class PostController {
     //báo cáo bài viết
     @PostMapping("/{post_id}/report")
     public ResponseEntity<Map<String, Object>> reportPost(
-            @RequestHeader("user-id") UUID userId,
+
             @PathVariable("post_id") UUID postId,
             @RequestBody ReportRequest request) {
 
-        // Gọi Service xử lý lưu báo cáo
-        postService.reportPost(postId, userId, request);
+        // 1. Tự động lấy username từ Token
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // 2. Truyền username xuống Service
+        postService.reportPost(postId, username, request);
 
         // Trả về JSON đúng chuẩn 200 OK
         Map<String, Object> response = new HashMap<>();
