@@ -81,4 +81,25 @@ public class CommentServiceImpl implements CommentService {
         return commentMapper.toDto(savedComment);
     }
 
+    //Xóa cmt
+    @Override
+    @Transactional
+    public void deleteComment(UUID postId, Long commentId, UUID userId) {
+        Post post = postRepository.findById(postId).orElseThrow(() -> new BusinessException(404, "POST_NOT_FOUND"));
+        Comment comment = commentRepository.findById(commentId).orElseThrow(() -> new BusinessException(404, "COMMENT_NOT_FOUND"));
+
+        if (!comment.getPostId().equals(postId)) {
+            throw new BusinessException(400, "COMMENT_DOES_NOT_BELONG_TO_POST");
+        }
+
+        boolean isCommentAuthor = comment.getUserId().equals(userId);
+        boolean isPostAuthor = post.getUserId().equals(userId);
+
+        if (!isCommentAuthor && !isPostAuthor) {
+            throw new BusinessException(403, "FORBIDDEN");
+        }
+
+        commentRepository.delete(comment);
+    }
+
 }

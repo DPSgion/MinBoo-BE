@@ -67,4 +67,20 @@ public class CommentController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    //Xóa cmt
+    @DeleteMapping("/{comment_id}")
+    public ResponseEntity<Map<String, Object>> deleteComment(
+            @RequestHeader("user-id") UUID userId,
+            @PathVariable("post_id") UUID postId,
+            @PathVariable("comment_id") Long commentId) {
+
+        commentService.deleteComment(postId, commentId, userId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Comment deleted successfully");
+
+        return ResponseEntity.ok(response);
+    }
 }
