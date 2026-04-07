@@ -27,7 +27,7 @@ public class PrivateChatStorageService {
     private final String namespace = "axhjvdpvhq0q";
     private final String bucketName = "minboo-chat-storage";
     private final String region = "ap-singapore-1";
-    private final String profileName = "DEFAULT";
+    private final String profileName = "ACCOUNT_2";
 
     private final ObjectStorage client;
 
