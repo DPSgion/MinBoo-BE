@@ -11,11 +11,11 @@ public interface PostService {
 
     public PostResponse createPost(CreatePostRequest request, String username);
 
-    public void deletePost(UUID postID);
+    void deletePost(UUID postId, String username);
 
     public PostResponse updatePost(UUID postId, CreatePostRequest request, String username);
 
-    public void deletePostImage(UUID postId);
+    void deletePostImage(UUID postId, String username);
 
     public Map<String, Object> getHomeFeed(String username, int page, int limit);
 

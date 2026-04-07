@@ -46,16 +46,20 @@ public class PostController {
     }
 
     //Xóa bài viết
-    @DeleteMapping("{post_id}")
-    public ResponseEntity<?> deletePost(@PathVariable("post_id")UUID postID){
-        postService.deletePost(postID);
+    @DeleteMapping("/{post_id}")
+    public ResponseEntity<?> deletePost(@PathVariable("post_id") UUID postId) {
+
+        // 1. Lấy username của người đang thực hiện request
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // 2. Truyền xuống Service
+        postService.deletePost(postId, username);
 
         Map<String, Object> responseBody = new HashMap<>();
         responseBody.put("success", true);
         responseBody.put("message", "Post deleted successfully");
 
         return ResponseEntity.ok(responseBody);
-
     }
 
     //Sửa bài viết
@@ -82,13 +86,15 @@ public class PostController {
     @DeleteMapping("/{post_id}/image")
     public ResponseEntity<?> deletePostImage(@PathVariable("post_id") UUID postId) {
 
-        // Giao toàn bộ việc nặng nhọc cho Service xử lý
-        postService.deletePostImage(postId);
+        // 1. Lấy username của người đang thực hiện request
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        // Trả kết quả về cho Frontend/Postman
+        // 2. Truyền xuống Service
+        postService.deletePostImage(postId, username);
+
         Map<String, Object> responseBody = new HashMap<>();
         responseBody.put("success", true);
-        responseBody.put("message", "Post delete images successfully");
+        responseBody.put("message", "Post image deleted successfully");
 
         return ResponseEntity.ok(responseBody);
     }

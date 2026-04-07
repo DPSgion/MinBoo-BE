@@ -121,16 +121,32 @@ public class PostServiceImpl implements PostService {
     }
 
     //xóa bài viết
+    @Override
     @Transactional
-    public void deletePost(UUID postID){
-        //kt xem postID có tồn tại không
-        Post post = postRepository.findById(postID)
+    public void deletePost(UUID postId, String username) {
+        // 1. Lấy thông tin User từ Database
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessException(404, "USER_NOT_FOUND"));
+
+        // 2. Kiểm tra xem bài viết có tồn tại không
+        Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(404, "POST_NOT_FOUND"));
-        //Xóa file ảnh trên Oracle
-        if (post.getUrlImg() != null) {
-            imageStorageService.deleteImageByUrl(post.getUrlImg());
+
+        // 3. KIỂM TRA QUYỀN: Bắt buộc phải là chủ bài viết
+        if (!post.getUserId().equals(user.getId())) {
+            throw new BusinessException(403, "FORBIDDEN");
         }
-        //Xóa bài viết trong Database
+
+        // 4. Xóa file ảnh trên Oracle (nếu có)
+        if (post.getUrlImg() != null) {
+            try {
+                imageStorageService.deleteImageByUrl(post.getUrlImg());
+            } catch (Exception e) {
+                System.err.println("Lỗi khi xóa ảnh bài viết trên Cloud: " + e.getMessage());
+            }
+        }
+
+        // 5. Xóa bài viết trong Database
         postRepository.delete(post);
     }
 
@@ -214,20 +230,30 @@ public class PostServiceImpl implements PostService {
     }
 
     //Hàm xóa riêng ảnh
+    @Override
     @Transactional
-    public void deletePostImage(UUID postId) {
-        // 1. Tìm bài viết trong Database
+    public void deletePostImage(UUID postId, String username) {
+        // 1. Lấy thông tin User từ Database
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessException(404, "USER_NOT_FOUND"));
+
+        // 2. Tìm bài viết trong Database
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(404, "POST_NOT_FOUND"));
 
-        // 2. Nếu bài viết có ảnh thì mới tiến hành xóa
+        // 3. KIỂM TRA QUYỀN: Bắt buộc phải là chủ bài viết
+        if (!post.getUserId().equals(user.getId())) {
+            throw new BusinessException(403, "FORBIDDEN");
+        }
+
+        // 4. Nếu bài viết có ảnh thì tiến hành xóa
         if (post.getUrlImg() != null) {
             try {
                 // Xóa ảnh vật lý trên Oracle Cloud
                 imageStorageService.deleteImageByUrl(post.getUrlImg());
             } catch (Exception e) {
-                // In ra log nếu Cloud báo lỗi, nhưng vẫn tiếp tục chạy để xóa link trong DB
-                System.err.println("Lỗi khi xóa ảnh trên Cloud: " + e.getMessage());
+                // In ra log nếu Cloud báo lỗi, tiếp tục chạy để xóa link trong DB
+                System.err.println("Lỗi khi xóa riêng ảnh trên Cloud: " + e.getMessage());
             }
 
             // Xóa link ảnh trong Entity và lưu lại xuống DB
