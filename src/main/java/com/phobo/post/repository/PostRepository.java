@@ -16,15 +16,18 @@ import java.util.UUID;
 public interface PostRepository extends JpaRepository<Post, UUID> {
     // Lọc bài viết Feed (Bài của mình + Bài của bạn bè mang quyền public/friends)
     @Query(value = "SELECT p.* FROM posts p " +
-            "WHERE p.deleted_at IS NULL AND " +
-            "(p.user_id = :userId OR " +
-            "  (p.user_id IN (" +
-            "    SELECT user_id_b FROM friends WHERE user_id_a = :userId UNION " +
-            "    SELECT user_id_a FROM friends WHERE user_id_b = :userId" +
-            "  ) AND p.privacy IN ('public', 'friends'))" +
+            "WHERE p.deleted_at IS NULL AND (" +
+            "   p.user_id = :userId " +                       // 1. Lấy bài của chính mình
+            "   OR p.privacy = 'public' " +                   // 2. Lấy TẤT CẢ bài public của mọi người (kể cả người lạ)
+            "   OR (p.privacy = 'friends' AND p.user_id IN (" + // 3. Lấy bài 'friends' của bạn bè
+            "       SELECT user_id_b FROM friends WHERE user_id_a = :userId UNION " +
+            "       SELECT user_id_a FROM friends WHERE user_id_b = :userId" +
+            "   ))" +
             ") " +
-            "ORDER BY p.created_at DESC",
-            countQuery = "SELECT count(*) FROM posts p WHERE p.deleted_at IS NULL AND (p.user_id = :userId OR (p.user_id IN (SELECT user_id_b FROM friends WHERE user_id_a = :userId UNION SELECT user_id_a FROM friends WHERE user_id_b = :userId) AND p.privacy IN ('public', 'friends')))",
+            "ORDER BY RANDOM()", //  lấy ngẫu nhiên
+
+            // Nhớ phải sửa cả câu countQuery cho khớp với logic WHERE ở trên nhé
+            countQuery = "SELECT count(*) FROM posts p WHERE p.deleted_at IS NULL AND (p.user_id = :userId OR p.privacy = 'public' OR (p.privacy = 'friends' AND p.user_id IN (SELECT user_id_b FROM friends WHERE user_id_a = :userId UNION SELECT user_id_a FROM friends WHERE user_id_b = :userId)))",
             nativeQuery = true)
     Page<Post> getFeedPosts(@Param("userId") UUID userId, Pageable pageable);
 
