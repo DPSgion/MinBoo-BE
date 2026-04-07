@@ -60,4 +60,25 @@ public class CommentServiceImpl implements CommentService {
 
         return data;
     }
+
+    @Override
+    @Transactional
+    public CommentDto createComment(UUID postId, UUID userId, CommentRequest request) {
+        if (request.getContent() == null || request.getContent().trim().isEmpty() || request.getContent().length() > 1000) {
+            throw new BusinessException(400, "BAD_REQUEST_INVALID_CONTENT");
+        }
+
+        postRepository.findById(postId).orElseThrow(() -> new BusinessException(404, "POST_NOT_FOUND"));
+        contentModerationService.moderateText(request.getContent());
+
+        Comment comment = new Comment();
+        comment.setPostId(postId);
+        comment.setUserId(userId);
+        comment.setContent(request.getContent().trim());
+        Comment savedComment = commentRepository.save(comment);
+
+        // DÙNG MAPPER ĐỂ TRẢ VỀ:
+        return commentMapper.toDto(savedComment);
+    }
+
 }
