@@ -44,7 +44,12 @@ class AuthServiceImpl implements AuthService {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtil.generateToken(authentication.getName());
-        return new AuthResponse(jwt);
+
+        String roleWithPrefix = authentication.getAuthorities().iterator().next().getAuthority();
+
+        String roleName = roleWithPrefix.replace("ROLE_", ""); // Cho gọn, chỉ đưa tới Frontend là ADMIN hoặc USER thoi
+
+        return new AuthResponse(jwt, roleName);
     }
 
     @Transactional
@@ -87,6 +92,9 @@ class AuthServiceImpl implements AuthService {
             }
         }
         user.setAvatar(avatarInput);
+
+        user.setRole(0);
+
         User savedUser = userRepository.save(user);
 
         return new RegisterResponse(
