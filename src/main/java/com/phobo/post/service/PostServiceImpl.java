@@ -317,6 +317,43 @@ public class PostServiceImpl implements PostService {
         return data;
     }
 
+
+    //Lọc bài viết theo tag và content
+    public Map<String, Object> searchPosts(String username, String keyword, List<Integer> tagIds, int page, int limit) {
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessException(404, "USER_NOT_FOUND"));
+        UUID userId = user.getId();
+
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        if (keyword != null && keyword.trim().isEmpty()) { keyword = null; }
+
+        boolean hasTags = tagIds != null && !tagIds.isEmpty();
+        List<Integer> queryTags = hasTags ? tagIds : List.of(0);
+
+        // THÊM Ở ĐÂY: Đếm xem user đang muốn tìm bao nhiêu tag
+        int tagCount = hasTags ? tagIds.size() : 0;
+
+        // GỌI XUỐNG DB (Truyền thêm tagCount vào)
+        Page<Post> postPage = postRepository.searchPosts(userId, keyword, hasTags, queryTags, tagCount, pageable);
+
+        // ... Các phần map DTO và đóng gói JSON phía dưới giữ nguyên y hệt bài trước ...
+        List<FeedPostDto> feedList = postPage.getContent().stream()
+                .map(post -> convertToDto(post, userId))
+                .collect(Collectors.toList());
+
+        Map<String, Object> pagination = new HashMap<>();
+        pagination.put("page", page);
+        pagination.put("limit", limit);
+        pagination.put("total", postPage.getTotalElements());
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("posts", feedList);
+        data.put("pagination", pagination);
+
+        return data;
+    }
+
     //Report
     @Transactional
     public void reportPost(UUID postId, String username, ReportRequest request) {

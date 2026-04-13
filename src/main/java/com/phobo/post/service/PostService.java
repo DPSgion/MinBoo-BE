@@ -4,6 +4,7 @@ import com.phobo.post.dto.CreatePostRequest;
 import com.phobo.post.dto.PostResponse;
 import com.phobo.post.dto.ReportRequest;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,4 +23,6 @@ public interface PostService {
     public Map<String, Object> getUserPosts(String viewername, UUID profileOwnerId, int page, int limit);
 
     public void reportPost(UUID postId, String username, ReportRequest request);
+
+    public Map<String, Object> searchPosts(String username, String keyword, List<Integer> tagIds, int page, int limit);
 }
