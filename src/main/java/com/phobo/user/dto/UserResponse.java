@@ -12,6 +12,7 @@ public record UserResponse(
     Integer sex,
     String address,
     LocalDate birth,
-    String avatar
+    String avatar,
+    String roleName
 ) {
 }
