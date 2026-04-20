@@ -2,6 +2,10 @@ package com.phobo.post.service;
 
 import com.phobo.common.Moderation.ContentModerationService;
 import com.phobo.common.exception.BusinessException;
+import com.phobo.friends.entity.Friend;
+import com.phobo.friends.repository.FriendRepository;
+import com.phobo.notification.entity.NotificationType;
+import com.phobo.notification.service.NotificationService;
 import com.phobo.post.dto.ReportRequest;
 import com.phobo.post.entity.Report;
 import com.phobo.post.repository.ReportRepository;
@@ -38,8 +42,10 @@ public class PostServiceImpl implements PostService {
     private final UserRepository userRepository;
     private final ReportRepository reportRepository;
     private final ContentModerationService contentModerationService;
+    private final NotificationService notificationService;
+    private final FriendRepository friendRepository;
 
-    public PostServiceImpl(PostRepository postRepository, TagRepository tagRepository, PostTagRepository postTagRepository, ImageStorageService imageStorageService, PostMapper postMapper, UserRepository userRepository, ReportRepository reportRepository, ContentModerationService contentModerationService) {
+    public PostServiceImpl(PostRepository postRepository, TagRepository tagRepository, PostTagRepository postTagRepository, ImageStorageService imageStorageService, PostMapper postMapper, UserRepository userRepository, ReportRepository reportRepository, ContentModerationService contentModerationService, NotificationService notificationService, FriendRepository friendRepository) {
         this.postRepository = postRepository;
         this.tagRepository = tagRepository;
         this.postTagRepository = postTagRepository;
@@ -48,6 +54,8 @@ public class PostServiceImpl implements PostService {
         this.userRepository = userRepository;
         this.reportRepository = reportRepository;
         this.contentModerationService = contentModerationService;
+        this.notificationService = notificationService;
+        this.friendRepository = friendRepository;
     }
 
     @Transactional
@@ -115,6 +123,29 @@ public class PostServiceImpl implements PostService {
             }
 
             savedPost = postRepository.save(savedPost);
+        }
+
+        // [THÊM LOGIC THÔNG BÁO] - Báo cho bạn bè biết mình vừa đăng bài
+        // Chỉ thông báo nếu bài viết không phải là "Chỉ mình tôi" (private / only_me)
+        String privacy = savedPost.getPrivacy() != null ? savedPost.getPrivacy() : "public";
+        if (!privacy.equals("private") && !privacy.equals("only_me")) {
+
+            // Lấy danh sách bạn bè của user đăng bài
+            List<Friend> friends = friendRepository.getFriendList(user);
+
+            for (Friend f : friends) {
+                // Xác định đối tượng bạn bè (vì user có thể nằm ở cột user1 hoặc user2)
+                User friendUser = f.getUser1().getId().equals(user.getId()) ? f.getUser2() : f.getUser1();
+
+                notificationService.createNotification(
+                        friendUser,                        // Người nhận (Bạn bè)
+                        user,                              // Người gửi (Chủ bài viết)
+                        NotificationType.new_post,         // Enum chuẩn
+                        user.getName() + " đã đăng một bài viết mới.",
+                        savedPost.getPostId().toString(),  // ID bài viết để FE điều hướng
+                        "post"                             // Chuẩn Constraint DB
+                );
+            }
         }
 
         return postMapper.toResponse(savedPost);
