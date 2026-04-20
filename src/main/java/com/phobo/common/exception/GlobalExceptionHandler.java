@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -113,6 +114,18 @@ public class GlobalExceptionHandler {
                         "Unauthorized",
                         message
                 ));
+    }
+
+    // 8. Handle Violate Admin Permission (403)
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Object> handleAccessDeniedException(org.springframework.security.access.AccessDeniedException ex) {
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                "status", 403,
+                "error", "Forbidden",
+                "message", "You don't have permission to do this action ! Just ADMIN can do that.",
+                "timestamp", LocalDateTime.now().toString()
+        ));
     }
 
 }

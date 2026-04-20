@@ -25,6 +25,7 @@ public record UserRequest(
         Integer sex, // Must default = 0 or = 1 in UI
         LocalDate birth,
         String address,
+        Integer role, // Default = 0
         MultipartFile avatar
 ) {
 }

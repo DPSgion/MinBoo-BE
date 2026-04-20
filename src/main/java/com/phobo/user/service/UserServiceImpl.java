@@ -93,6 +93,13 @@ public class UserServiceImpl implements UserService {
 
         user.setAvatar(avatarInput);
 
+        if (userRequest.role() == null){
+            user.setRole(0);
+        }
+        else{
+            user.setRole(userRequest.role());
+        }
+
         String hashedPassword = passwordEncoder.encode(userRequest.password());
 
         user.setPassword(hashedPassword);
@@ -148,7 +155,13 @@ public class UserServiceImpl implements UserService {
 
         }
 
-        imageStorageService.deleteImageByUrl(oldAvatar);
+        if (oldAvatar != null && !oldAvatar.contains("dicebear.com")) {
+            try {
+                imageStorageService.deleteImageByUrl(oldAvatar);
+            } catch (Exception e) {
+                System.out.println("There is error when deleting old avatar on cloud: " + e.getMessage());
+            }
+        }
 
         existingUser.setAvatar(avatarInput);
         User savedUser = userRepository.save(existingUser);
@@ -180,9 +193,16 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUser(UUID id) {
-
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
+
+        if (existingUser.getAvatar() != null && !existingUser.getAvatar().contains("dicebear.com")) {
+            try {
+                imageStorageService.deleteImageByUrl(existingUser.getAvatar());
+            } catch (Exception e) {
+                System.out.println("There is error when deleting old avatar on cloud: " + e.getMessage());
+            }
+        }
 
         userRepository.delete(existingUser);
     }

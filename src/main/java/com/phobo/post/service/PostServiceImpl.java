@@ -295,83 +295,17 @@ public class PostServiceImpl implements PostService {
 
 
     public Map<String, Object> getHomeFeed(String username, int page, int limit) {
-
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new BusinessException(404, "USER_NOT_FOUND"));
-
         UUID userId = user.getId();
 
-        // Trừ 1 vì Page trong Spring Boot bắt đầu từ số 0
         Pageable pageable = PageRequest.of(page - 1, limit);
         Page<Post> postPage = postRepository.getFeedPosts(userId, pageable);
 
-        List<FeedPostDto> feedList = new ArrayList<>();
-        String baseUrl = "https://objectstorage.ap-singapore-1.oraclecloud.com/n/axqv9e1of21u/b/minboo-storage/o/";
+        List<FeedPostDto> feedList = postPage.getContent().stream()
+                .map(post -> convertToDto(post, userId))
+                .collect(Collectors.toList());
 
-        for (Post post : postPage.getContent()) {
-            FeedPostDto dto = new FeedPostDto();
-            dto.setPostId(post.getPostId());
-            dto.setContent(post.getContent());
-            dto.setPrivacy(post.getPrivacy());
-            dto.setCreatedAt(post.getCreatedAt());
-            dto.setUpdatedAt(post.getUpdateAt());
-
-            // Link ảnh bài viết
-            if (post.getUrlImg() != null && !post.getUrlImg().isEmpty()) {
-                dto.setUrlImg(post.getUrlImg().startsWith("http") ? post.getUrlImg() : baseUrl + post.getUrlImg());
-            }
-
-            // 1. Tác giả
-            // (Đảm bảo bạn đã khai báo UserRepository trong class PostService)
-            userRepository.findById(post.getUserId()).ifPresent(author -> {
-                FeedPostDto.AuthorDto authorDto = new FeedPostDto.AuthorDto();
-                authorDto.setUserId(author.getId());
-                authorDto.setName(author.getName());
-                authorDto.setUrlAvt(author.getAvatar());
-                dto.setAuthor(authorDto);
-            });
-
-            // 2. Tags
-            if (post.getPostTags() != null) {
-                List<FeedPostDto.TagDto> tagDtos = post.getPostTags().stream().map(pt -> {
-                    FeedPostDto.TagDto t = new FeedPostDto.TagDto();
-                    t.setTagId(pt.getTag().getTagId());
-                    t.setTagName(pt.getTag().getTagName());
-                    return t;
-                }).collect(Collectors.toList());
-                dto.setTags(tagDtos);
-            }
-
-            // 3. Comment Count
-            dto.setCommentsCount(postRepository.countCommentsByPostId(post.getPostId()));
-
-            // 4. Reaction Count
-            List<Object[]> reactionData = postRepository.countReactionsByPostId(post.getPostId());
-            FeedPostDto.ReactionCountDto rCount = new FeedPostDto.ReactionCountDto();
-            long totalReacts = 0;
-            for (Object[] row : reactionData) {
-                String type = (String) row[0];
-                long count = ((Number) row[1]).longValue();
-                totalReacts += count;
-                switch (type.toLowerCase()) {
-                    case "like": rCount.setLike(count); break;
-                    case "love": rCount.setLove(count); break;
-                    case "haha": rCount.setHaha(count); break;
-                    case "sad": rCount.setSad(count); break;
-                    case "angry": rCount.setAngry(count); break;
-                }
-            }
-            rCount.setTotal(totalReacts);
-            dto.setReactionsCount(rCount);
-
-            // 5. My Reaction
-            String myReact = postRepository.getMyReaction(post.getPostId(), userId);
-            dto.setMyReaction(myReact);
-
-            feedList.add(dto);
-        }
-
-        // Đóng gói JSON Pagination
         Map<String, Object> pagination = new HashMap<>();
         pagination.put("page", page);
         pagination.put("limit", limit);
@@ -387,80 +321,21 @@ public class PostServiceImpl implements PostService {
     // Lấy bài viết cho Trang cá nhân
     public Map<String, Object> getUserPosts(String viewername, UUID profileOwnerId, int page, int limit) {
 
+        // 1. Tìm thông tin người đang xem (Viewer)
         User user = userRepository.findByUsername(viewername)
                 .orElseThrow(() -> new BusinessException(404, "USER_NOT_FOUND"));
-
         UUID viewerId = user.getId();
 
+        // 2. Lấy dữ liệu từ DB
         Pageable pageable = PageRequest.of(page - 1, limit);
-
         Page<Post> postPage = postRepository.getUserProfilePosts(viewerId, profileOwnerId, pageable);
 
-        List<FeedPostDto> postList = new ArrayList<>();
+        // 3. MAP DỮ LIỆU CHỈ BẰNG 1 DÒNG STREAM API (Sử dụng hàm chung)
+        List<FeedPostDto> postList = postPage.getContent().stream()
+                .map(post -> convertToDto(post, viewerId)) // <-- Tái sử dụng hàm ở đây
+                .collect(Collectors.toList());
 
-        String baseUrl = "https://objectstorage.ap-singapore-1.oraclecloud.com/n/axqv9e1of21u/b/minboo-storage/o/";
-
-        for (Post post : postPage.getContent()) {
-            FeedPostDto dto = new FeedPostDto();
-            dto.setPostId(post.getPostId());
-            dto.setContent(post.getContent());
-            dto.setPrivacy(post.getPrivacy());
-            dto.setCreatedAt(post.getCreatedAt());
-            dto.setUpdatedAt(post.getUpdateAt());
-
-            // Link ảnh bài viết
-            if (post.getUrlImg() != null && !post.getUrlImg().isEmpty()) {
-                dto.setUrlImg(post.getUrlImg().startsWith("http") ? post.getUrlImg() : baseUrl + post.getUrlImg());
-            }
-
-            // 1. Tác giả
-            userRepository.findById(post.getUserId()).ifPresent(author -> {
-                FeedPostDto.AuthorDto authorDto = new FeedPostDto.AuthorDto();
-                authorDto.setUserId(author.getId());
-                authorDto.setName(author.getName());
-                authorDto.setUrlAvt(author.getAvatar());
-                dto.setAuthor(authorDto);
-            });
-
-            // 2. Tags
-            if (post.getPostTags() != null) {
-                List<FeedPostDto.TagDto> tagDtos = post.getPostTags().stream().map(pt -> {
-                    FeedPostDto.TagDto t = new FeedPostDto.TagDto();
-                    t.setTagId(pt.getTag().getTagId());
-                    t.setTagName(pt.getTag().getTagName());
-                    return t;
-                }).collect(Collectors.toList());
-                dto.setTags(tagDtos);
-            }
-
-            // 3. Comment Count
-            dto.setCommentsCount(postRepository.countCommentsByPostId(post.getPostId()));
-
-            // 4. Reaction Count
-            List<Object[]> reactionData = postRepository.countReactionsByPostId(post.getPostId());
-            FeedPostDto.ReactionCountDto rCount = new FeedPostDto.ReactionCountDto();
-            long totalReacts = 0;
-            for (Object[] row : reactionData) {
-                String type = (String) row[0];
-                long count = ((Number) row[1]).longValue();
-                totalReacts += count;
-                switch (type.toLowerCase()) {
-                    case "like": rCount.setLike(count); break;
-                    case "love": rCount.setLove(count); break;
-                    case "haha": rCount.setHaha(count); break;
-                    case "sad": rCount.setSad(count); break;
-                    case "angry": rCount.setAngry(count); break;
-                }
-            }
-            rCount.setTotal(totalReacts);
-            dto.setReactionsCount(rCount);
-
-            String myReact = postRepository.getMyReaction(post.getPostId(), viewerId);
-            dto.setMyReaction(myReact);
-
-            postList.add(dto);
-        }
-
+        // 4. Đóng gói JSON trả về
         Map<String, Object> pagination = new HashMap<>();
         pagination.put("page", page);
         pagination.put("limit", limit);
@@ -468,6 +343,43 @@ public class PostServiceImpl implements PostService {
 
         Map<String, Object> data = new HashMap<>();
         data.put("posts", postList);
+        data.put("pagination", pagination);
+
+        return data;
+    }
+
+
+    //Lọc bài viết theo tag và content
+    public Map<String, Object> searchPosts(String username, String keyword, List<Integer> tagIds, int page, int limit) {
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessException(404, "USER_NOT_FOUND"));
+        UUID userId = user.getId();
+
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        if (keyword != null && keyword.trim().isEmpty()) { keyword = null; }
+
+        boolean hasTags = tagIds != null && !tagIds.isEmpty();
+        List<Integer> queryTags = hasTags ? tagIds : List.of(0);
+
+        // THÊM Ở ĐÂY: Đếm xem user đang muốn tìm bao nhiêu tag
+        int tagCount = hasTags ? tagIds.size() : 0;
+
+        // GỌI XUỐNG DB (Truyền thêm tagCount vào)
+        Page<Post> postPage = postRepository.searchPosts(userId, keyword, hasTags, queryTags, tagCount, pageable);
+
+        // ... Các phần map DTO và đóng gói JSON phía dưới giữ nguyên y hệt bài trước ...
+        List<FeedPostDto> feedList = postPage.getContent().stream()
+                .map(post -> convertToDto(post, userId))
+                .collect(Collectors.toList());
+
+        Map<String, Object> pagination = new HashMap<>();
+        pagination.put("page", page);
+        pagination.put("limit", limit);
+        pagination.put("total", postPage.getTotalElements());
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("posts", feedList);
         data.put("pagination", pagination);
 
         return data;
@@ -502,6 +414,74 @@ public class PostServiceImpl implements PostService {
 
         // 4. Lưu xuống Database
         reportRepository.save(report);
+    }
+
+
+
+    // =========================================================================
+    // HÀM DÙNG CHUNG: lấy bài viết
+    // =========================================================================
+    private FeedPostDto convertToDto(Post post, UUID viewerId) {
+        FeedPostDto dto = new FeedPostDto();
+        dto.setPostId(post.getPostId());
+        dto.setContent(post.getContent());
+        dto.setPrivacy(post.getPrivacy());
+        dto.setCreatedAt(post.getCreatedAt());
+        dto.setUpdatedAt(post.getUpdateAt());
+
+        // 1. Link ảnh
+        String baseUrl = "https://objectstorage.ap-singapore-1.oraclecloud.com/n/axqv9e1of21u/b/minboo-storage/o/";
+        if (post.getUrlImg() != null && !post.getUrlImg().isEmpty()) {
+            dto.setUrlImg(post.getUrlImg().startsWith("http") ? post.getUrlImg() : baseUrl + post.getUrlImg());
+        }
+
+        // 2. Tác giả
+        userRepository.findById(post.getUserId()).ifPresent(author -> {
+            FeedPostDto.AuthorDto authorDto = new FeedPostDto.AuthorDto();
+            authorDto.setUserId(author.getId());
+            authorDto.setName(author.getName());
+            authorDto.setUrlAvt(author.getAvatar());
+            dto.setAuthor(authorDto);
+        });
+
+        // 3. Tags
+        if (post.getPostTags() != null) {
+            List<FeedPostDto.TagDto> tagDtos = post.getPostTags().stream().map(pt -> {
+                FeedPostDto.TagDto t = new FeedPostDto.TagDto();
+                t.setTagId(pt.getTag().getTagId());
+                t.setTagName(pt.getTag().getTagName());
+                return t;
+            }).collect(Collectors.toList());
+            dto.setTags(tagDtos);
+        }
+
+        // 4. Đếm số Bình luận
+        dto.setCommentsCount(postRepository.countCommentsByPostId(post.getPostId()));
+
+        // 5. Tính toán các loại Cảm xúc (Reaction)
+        List<Object[]> reactionData = postRepository.countReactionsByPostId(post.getPostId());
+        FeedPostDto.ReactionCountDto rCount = new FeedPostDto.ReactionCountDto();
+        long totalReacts = 0;
+
+        for (Object[] row : reactionData) {
+            String type = (String) row[0];
+            long count = ((Number) row[1]).longValue();
+            totalReacts += count;
+            switch (type.toLowerCase()) {
+                case "like": rCount.setLike(count); break;
+                case "love": rCount.setLove(count); break;
+                case "haha": rCount.setHaha(count); break;
+                case "sad": rCount.setSad(count); break;
+                case "angry": rCount.setAngry(count); break;
+            }
+        }
+        rCount.setTotal(totalReacts);
+        dto.setReactionsCount(rCount);
+
+        // 6. Cảm xúc của chính mình (My Reaction)
+        dto.setMyReaction(postRepository.getMyReaction(post.getPostId(), viewerId));
+
+        return dto;
     }
 
 }
