@@ -10,6 +10,8 @@ import com.phobo.chat.repository.MessageRepository;
 import com.phobo.common.exception.BusinessException;
 import com.phobo.common.oci.PrivateChatStorageService;
 import com.phobo.friends.repository.FriendRepository;
+import com.phobo.notification.entity.NotificationType;
+import com.phobo.notification.service.NotificationService;
 import com.phobo.user.entity.User;
 import com.phobo.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -41,6 +43,8 @@ public class ChatServiceImpl implements ChatService {
     private PrivateChatStorageService privateChatStorageService;
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+    @Autowired
+    private NotificationService notificationService;
 
     //1 - create/get phong chat
     @Transactional
@@ -174,14 +178,24 @@ public class ChatServiceImpl implements ChatService {
         MessageResponse responseDto = mapToMessageResponse(savedMessage);
 
         // 2. Xác định người nhận là ai (Nếu mình là User 1 thì người nhận là User 2)
-        UUID receiverId = conversation.getUserOne().getId().equals(senderId)
-                ? conversation.getUserTwo().getId()
-                : conversation.getUserOne().getId();
+        User receiver = conversation.getUserOne().getId().equals(senderId)
+                ? conversation.getUserTwo()
+                : conversation.getUserOne();
 
         // 3. Bắn tin nhắn thẳng vào kênh của người nhận
         // Cú pháp: Gửi tới kênh /user/{receiverId}/queue/messages
-        messagingTemplate.convertAndSend("/topic/messages/" + receiverId, responseDto);
+        messagingTemplate.convertAndSend("/topic/messages/" + receiver.getId(), responseDto);
         // KẾT THÚC: LOGIC BẮN WEBSOCKET
+
+        // BẮN THÔNG BÁO CHO NGƯỜI NHẬN
+        notificationService.createNotification(
+                receiver,
+                sender,
+                NotificationType.new_message, // 1. Đổi sang enum chữ thường
+                sender.getName() + " đã gửi cho bạn một tin nhắn mới",
+                conversationId.toString(),
+                "conversation" // 2. Đổi thành chữ thường (Khớp với check của entity_type)
+        );
 
         // 6. Trả về DTO
         return mapToMessageResponse(savedMessage);
