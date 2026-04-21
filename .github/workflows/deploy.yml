@@ -57,6 +57,10 @@ jobs:
                     # export SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }}
                     # export SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}
 
+                    export OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}""
+                    export SIGHTENGINE_API_USER="${{ secrets.SIGHTENGINE_API_USER }}""
+                    export SIGHTENGINE_API_SECRET="${{ secrets.SIGHTENGINE_API_SECRET }}""
+
                     nohup /home/ubuntu/.sdkman/candidates/java/current/bin/java -jar minboo-app.jar > application.log 2>&1 &
                         
                     echo "Success Deploy ! App is running."
