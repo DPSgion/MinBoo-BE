@@ -44,33 +44,29 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
+          set -e
           echo "Starting deployment process for MinBoo..."
 
-          # 1. Kéo Image mới nhất từ kho GHCR về EC2
+          # 1. Kéo Image
           docker pull ghcr.io/dpsgion/minboo-app:latest
 
-          # 2. Dừng và xóa phiên bản cũ đang chạy
+          # 2. Xóa container cũ
           docker stop minboo-container || true
           docker rm minboo-container || true
 
-          # 3. Khởi động Container mới
-          # 3. Khởi động Container Minboo kết nối tới Cloud DB
+          # 3. Khởi động Container (Viết kiểu này để tránh lỗi dấu cách sau dấu \)
           docker run -d \
-            --name minboo-container \
-            --restart unless-stopped \
-            -p 8080:8080 \
-
-            # Tách biệt rõ ràng 3 thông số DB
-            -e SPRING_DATASOURCE_URL="${{ secrets.SPRING_DATASOURCE_URL }}" \
-            -e SPRING_DATASOURCE_USERNAME="${{ secrets.SPRING_DATASOURCE_USERNAME }}" \
-            -e SPRING_DATASOURCE_PASSWORD="${{ secrets.SPRING_DATASOURCE_PASSWORD }}" \
-            
-            -e SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT="org.hibernate.dialect.PostgreSQLDialect" \
-            -e SPRING_JPA_HIBERNATE_DDL_AUTO="update" \
-            
-            -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
-            -e SIGHTENGINE_API_USER="${{ secrets.SIGHTENGINE_API_USER }}" \
-            -e SIGHTENGINE_API_SECRET="${{ secrets.SIGHTENGINE_API_SECRET }}" \
-            ghcr.io/dpsgion/minboo-app:latest
+          --name minboo-container \
+          --restart unless-stopped \
+          -p 8080:8080 \
+          -e SPRING_DATASOURCE_URL='${{ secrets.SPRING_DATASOURCE_URL }}' \
+          -e SPRING_DATASOURCE_USERNAME='${{ secrets.SPRING_DATASOURCE_USERNAME }}' \
+          -e SPRING_DATASOURCE_PASSWORD='${{ secrets.SPRING_DATASOURCE_PASSWORD }}' \
+          -e SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT='org.hibernate.dialect.PostgreSQLDialect' \
+          -e SPRING_JPA_HIBERNATE_DDL_AUTO='update' \
+          -e OPENAI_API_KEY='${{ secrets.OPENAI_API_KEY }}' \
+          -e SIGHTENGINE_API_USER='${{ secrets.SIGHTENGINE_API_USER }}' \
+          -e SIGHTENGINE_API_SECRET='${{ secrets.SIGHTENGINE_API_SECRET }}' \
+          ghcr.io/dpsgion/minboo-app:latest
 
           echo "🚀 Deploy thành công!"
