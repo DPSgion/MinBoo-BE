@@ -8,6 +8,8 @@ import com.phobo.friends.entity.Friend;
 import com.phobo.friends.entity.FriendRequestEntity;
 import com.phobo.friends.repository.FriendRepository;
 import com.phobo.friends.repository.FriendRequestRepository;
+import com.phobo.notification.entity.NotificationType;
+import com.phobo.notification.service.NotificationService;
 import com.phobo.user.entity.User;
 import com.phobo.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -25,11 +27,13 @@ public class FriendServiceImpl implements FriendService {
     private final UserRepository userRepository;
     private final FriendRepository friendRepository;
     private final FriendRequestRepository friendRequestRepository;
+    private final NotificationService notificationService;
 
-    public FriendServiceImpl(UserRepository userRepository, FriendRepository friendRepository, FriendRequestRepository friendRequestRepository) {
+    public FriendServiceImpl(UserRepository userRepository, FriendRepository friendRepository, FriendRequestRepository friendRequestRepository, NotificationService notificationService) {
         this.userRepository = userRepository;
         this.friendRepository = friendRepository;
         this.friendRequestRepository = friendRequestRepository;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -114,6 +118,17 @@ public class FriendServiceImpl implements FriendService {
                 requestEntity.setStatus(FriendRequestEntity.RequestStatus.PENDING);
 
                 FriendRequestEntity savedRequest = friendRequestRepository.save(requestEntity);
+
+                // [THÊM LOGIC THÔNG BÁO] - Trường hợp tái chế request cũ
+                notificationService.createNotification(
+                        receiverUser,
+                        requesterUser,
+                        NotificationType.friend_request,
+                        requesterUser.getName() + " đã gửi cho bạn một lời mời kết bạn",
+                        requesterUser.getId().toString(), // Target ID là ID của người gửi (để FE bấm vào thì bay ra Profile)
+                        "user" // Cột entity_type chuẩn theo DB của bạn
+                );
+
                 return mapToResponse(savedRequest);
             }
         }
@@ -126,6 +141,17 @@ public class FriendServiceImpl implements FriendService {
         newRequest.setMessage(friendRequest.message());
 
         FriendRequestEntity savedRequest = friendRequestRepository.save(newRequest);
+
+        // [THÊM LOGIC THÔNG BÁO] - Trường hợp request mới hoàn toàn
+        notificationService.createNotification(
+                receiverUser,
+                requesterUser,
+                NotificationType.friend_request,
+                requesterUser.getName() + " đã gửi cho bạn một lời mời kết bạn",
+                requesterUser.getId().toString(),
+                "user"
+        );
+
         return mapToResponse(savedRequest);
     }
 
@@ -180,6 +206,16 @@ public class FriendServiceImpl implements FriendService {
         }
 
         Friend savedFriend = friendRepository.save(friend);
+
+        // [THÊM LOGIC THÔNG BÁO] - Báo cho người gửi là mình đã đồng ý
+        notificationService.createNotification(
+                pendingRequest.getRequester(), // Người nhận thông báo là người ngày xưa gửi lời mời
+                currentUser,                   // Người kích hoạt là mình
+                NotificationType.friend_accepted,
+                currentUser.getName() + " đã chấp nhận lời mời kết bạn của bạn",
+                currentUser.getId().toString(),
+                "user"
+        );
 
         // 4. Trả về DTO như cũ để Frontend không báo lỗi
         return new FriendResponse(

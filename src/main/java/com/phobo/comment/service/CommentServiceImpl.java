@@ -7,6 +7,8 @@ import com.phobo.comment.mapper.CommentMapper;
 import com.phobo.comment.repository.CommentRepository;
 import com.phobo.common.Moderation.ContentModerationService;
 import com.phobo.common.exception.BusinessException;
+import com.phobo.notification.entity.NotificationType;
+import com.phobo.notification.service.NotificationService;
 import com.phobo.post.entity.Post;
 import com.phobo.post.repository.PostRepository;
 import com.phobo.user.entity.User;
@@ -28,13 +30,15 @@ public class CommentServiceImpl implements CommentService {
     private final UserRepository userRepository;
     private final ContentModerationService contentModerationService;
     private final CommentMapper commentMapper;
+    private final NotificationService notificationService;
 
-    public CommentServiceImpl(CommentRepository commentRepository, PostRepository postRepository, UserRepository userRepository, ContentModerationService contentModerationService, CommentMapper commentMapper) {
+    public CommentServiceImpl(CommentRepository commentRepository, PostRepository postRepository, UserRepository userRepository, ContentModerationService contentModerationService, CommentMapper commentMapper, NotificationService notificationService) {
         this.commentRepository = commentRepository;
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.contentModerationService = contentModerationService;
         this.commentMapper = commentMapper;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -68,7 +72,7 @@ public class CommentServiceImpl implements CommentService {
             throw new BusinessException(400, "BAD_REQUEST_INVALID_CONTENT");
         }
 
-        postRepository.findById(postId).orElseThrow(() -> new BusinessException(404, "POST_NOT_FOUND"));
+        Post post = postRepository.findById(postId).orElseThrow(() -> new BusinessException(404, "POST_NOT_FOUND"));
         contentModerationService.moderateText(request.getContent());
 
         Comment comment = new Comment();
@@ -76,6 +80,30 @@ public class CommentServiceImpl implements CommentService {
         comment.setUserId(userId);
         comment.setContent(request.getContent().trim());
         Comment savedComment = commentRepository.save(comment);
+
+        // [THÊM LOGIC THÔNG BÁO]
+        // Chỉ gửi thông báo nếu người comment KHÔNG PHẢI là chủ bài viết
+        if (!post.getUserId().equals(userId)) {
+            User sender = userRepository.findById(userId)
+                    .orElseThrow(() -> new BusinessException(404, "USER_NOT_FOUND"));
+            User recipient = userRepository.findById(post.getUserId())
+                    .orElseThrow(() -> new BusinessException(404, "USER_NOT_FOUND"));
+
+            // Cắt ngắn nội dung comment nếu quá dài để hiển thị trên thông báo cho đẹp
+            String shortContent = request.getContent().trim();
+            if (shortContent.length() > 30) {
+                shortContent = shortContent.substring(0, 30) + "...";
+            }
+
+            notificationService.createNotification(
+                    recipient,                      // Chủ bài viết
+                    sender,                         // Người comment
+                    NotificationType.new_comment,   // Enum: new_comment
+                    sender.getName() + " đã bình luận về bài viết của bạn: \"" + shortContent + "\"",
+                    postId.toString(),              // Target ID để FE bấm vào nhảy đến đúng bài viết
+                    "post"                          // Entity Type khớp với DB constraint
+            );
+        }
 
         // DÙNG MAPPER ĐỂ TRẢ VỀ:
         return commentMapper.toDto(savedComment);
