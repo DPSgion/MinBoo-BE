@@ -54,11 +54,20 @@ jobs:
           docker rm minboo-container || true
 
           # 3. Khởi động Container mới
+          # 3. Khởi động Container Minboo kết nối tới Cloud DB
           docker run -d \
             --name minboo-container \
             --restart unless-stopped \
             -p 8080:8080 \
+
+            # Tách biệt rõ ràng 3 thông số DB
             -e SPRING_DATASOURCE_URL="${{ secrets.SPRING_DATASOURCE_URL }}" \
+            -e SPRING_DATASOURCE_USERNAME="${{ secrets.SPRING_DATASOURCE_USERNAME }}" \
+            -e SPRING_DATASOURCE_PASSWORD="${{ secrets.SPRING_DATASOURCE_PASSWORD }}" \
+            
+            -e SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT="org.hibernate.dialect.PostgreSQLDialect" \
+            -e SPRING_JPA_HIBERNATE_DDL_AUTO="update" \
+            
             -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
             -e SIGHTENGINE_API_USER="${{ secrets.SIGHTENGINE_API_USER }}" \
             -e SIGHTENGINE_API_SECRET="${{ secrets.SIGHTENGINE_API_SECRET }}" \
