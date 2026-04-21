@@ -10,7 +10,7 @@ import org.mapstruct.*;
 public interface UserMapper {
 
     // Outbound: Entity to DTO
-
+    @Mapping(target = "roleName", expression = "java(user.getRole() == 1 ? \"ADMIN\" : \"USER\")")
     UserResponse toResponse(User user);
 
     // Inbound: DTO to Entity

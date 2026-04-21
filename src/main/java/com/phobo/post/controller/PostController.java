@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -135,6 +136,28 @@ public class PostController {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("message", "Report submitted successfully");
+
+        return ResponseEntity.ok(response);
+    }
+
+
+    // TÌM KIẾM BÀI VIẾT THEO CONTENT VÀ TAG
+    @GetMapping("/search")
+    public ResponseEntity<Map<String, Object>> searchPosts(
+            @RequestParam(value = "keyword", required = false) String keyword,
+            // SỬA Ở ĐÂY: Nhận vào một List thay vì 1 số
+            @RequestParam(value = "tag_id", required = false) List<Integer> tagIds,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "limit", defaultValue = "5") int limit) {
+
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // Truyền List xuống Service
+        Map<String, Object> data = postService.searchPosts(username, keyword, tagIds, page, limit);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", data);
 
         return ResponseEntity.ok(response);
     }

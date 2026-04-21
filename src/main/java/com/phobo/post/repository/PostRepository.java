@@ -60,4 +60,36 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
             countQuery = "SELECT count(*) FROM posts p WHERE p.deleted_at IS NULL AND p.user_id = :profileOwnerId AND (:viewerId = :profileOwnerId OR p.privacy = 'public' OR (p.privacy = 'friends' AND EXISTS (SELECT 1 FROM friends f WHERE (f.user_id_a = :viewerId AND f.user_id_b = :profileOwnerId) OR (f.user_id_a = :profileOwnerId AND f.user_id_b = :viewerId))))",
             nativeQuery = true)
     Page<Post> getUserProfilePosts(@Param("viewerId") UUID viewerId, @Param("profileOwnerId") UUID profileOwnerId, Pageable pageable);
+
+
+    // LỌC VÀ TÌM KIẾM BÀI VIẾT (Theo Content và Tag)
+    @Query(value = "SELECT p.* FROM posts p " +
+            "WHERE p.deleted_at IS NULL " +
+            "AND (:keyword IS NULL OR p.content ILIKE CONCAT('%', CAST(:keyword AS text), '%')) " +
+
+            "AND (:hasTags = false OR p.post_id IN (" +
+            "    SELECT pt.post_id FROM post_tags pt " +
+            "    WHERE pt.tag_id IN (:queryTags) " +
+            "    GROUP BY pt.post_id " +
+            "    HAVING COUNT(DISTINCT pt.tag_id) = :tagCount" + // Đếm xem có khớp đủ số lượng tag không
+            ")) " +
+
+            "AND (" +
+            "   p.user_id = :userId " +
+            "   OR p.privacy = 'public' " +
+            "   OR (p.privacy = 'friends' AND p.user_id IN (" +
+            "       SELECT user_id_b FROM friends WHERE user_id_a = :userId UNION " +
+            "       SELECT user_id_a FROM friends WHERE user_id_b = :userId" +
+            "   ))" +
+            ") " +
+            "ORDER BY p.created_at DESC",
+
+            countQuery = "SELECT count(*) FROM posts p WHERE p.deleted_at IS NULL AND (:keyword IS NULL OR p.content ILIKE CONCAT('%', CAST(:keyword AS text), '%')) AND (:hasTags = false OR p.post_id IN (SELECT pt.post_id FROM post_tags pt WHERE pt.tag_id IN (:queryTags) GROUP BY pt.post_id HAVING COUNT(DISTINCT pt.tag_id) = :tagCount)) AND (p.user_id = :userId OR p.privacy = 'public' OR (p.privacy = 'friends' AND p.user_id IN (SELECT user_id_b FROM friends WHERE user_id_a = :userId UNION SELECT user_id_a FROM friends WHERE user_id_b = :userId)))",
+            nativeQuery = true)
+    Page<Post> searchPosts(@Param("userId") UUID userId,
+                           @Param("keyword") String keyword,
+                           @Param("hasTags") boolean hasTags,
+                           @Param("queryTags") List<Integer> queryTags,
+                           @Param("tagCount") int tagCount, // THÊM THAM SỐ NÀY
+                           Pageable pageable);
 }

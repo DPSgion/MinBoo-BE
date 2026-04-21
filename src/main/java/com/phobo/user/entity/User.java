@@ -51,4 +51,7 @@ public class User {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
+    @Column(name = "role")
+    private int role;
+
 }
