@@ -25,7 +25,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: ghcr.io/${{ github.repository_owner }}/minboo-app:latest
+        tags: ghcr.io/dpsgion/minboo-app:latest
 
   # Deploy to EC2
   deploy-to-ec2:
@@ -42,7 +42,7 @@ jobs:
           echo "Starting deployment process for MinBoo..."
 
           # 1. Kéo Image mới nhất từ kho GHCR về EC2
-          docker pull ghcr.io/${{ github.repository_owner }}/minboo-app:latest
+          docker pull ghcr.io/dpsgion/minboo-app:latest
 
           # 2. Dừng và xóa phiên bản cũ đang chạy
           docker stop minboo-container || true
@@ -57,6 +57,6 @@ jobs:
             -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
             -e SIGHTENGINE_API_USER="${{ secrets.SIGHTENGINE_API_USER }}" \
             -e SIGHTENGINE_API_SECRET="${{ secrets.SIGHTENGINE_API_SECRET }}" \
-            ghcr.io/${{ github.repository_owner }}/minboo-app:latest
+            ghcr.io/dpsgion/minboo-app:latest
 
           echo "🚀 Deploy thành công!"
