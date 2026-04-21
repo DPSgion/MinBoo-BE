@@ -9,6 +9,11 @@ jobs:
   # Package and Push to GHCR
   build-and-push:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
     steps:
     - name: 1. Checkout code
       uses: actions/checkout@v6
