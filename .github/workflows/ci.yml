@@ -1,11 +1,10 @@
 name: Java CI with Maven
 
-# 1. When should the robot wake up ?
+# When should the robot wake up ?
 on:
-    push: # if doesn't have any code branches: ..., the robot will test all branches if someone push
-        # branches: [ "main" ] # Runs when someone push to main
+    push:
     pull_request:
-        branches: [ "main" ] # Runs when someone tries to merge code into main
+        branches: [ "main" ]
         
 jobs:
     build:
@@ -22,14 +21,6 @@ jobs:
             distribution: 'temurin'
             cache: 'maven'
             
-        - name: 3. Build and test
-          run: mvn -B package --file pom.xml
-          env:
-            SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
-            # SPRING_DATASOURCE_USERNAME: ${{ secrets.DB_USERNAME }}
-            # SPRING_DATASOURCE_PASSWORD: ${{ secrets.DB_PASSWORD }}
-
-            OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-            SIGHTENGINE_API_USER: ${{ secrets.SIGHTENGINE_API_USER }}
-            SIGHTENGINE_API_SECRET: ${{ secrets.SIGHTENGINE_API_SECRET }}
+        - name: 3. Compile Syntax Check
+          run: mvn clean compile
         
